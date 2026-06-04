@@ -1,0 +1,5 @@
+{
+  "proxyListenAddr": ":8080",
+  "dashboardListenAddr": ":9090",
+  "raftDataDir": "/app/data/raft"
+}
