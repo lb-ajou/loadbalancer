@@ -1,0 +1,9 @@
+:8080 {
+  reverse_proxy {
+    to backend-a:8080 backend-b:8080 backend-c:8080
+    lb_policy round_robin
+    health_uri /health
+    health_interval 5s
+    health_timeout 2s
+  }
+}

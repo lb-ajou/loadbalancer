@@ -1,0 +1,153 @@
+name: benchmark-check
+
+services:
+  proxy:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    command: ["/app/benchmark-config/app.json"]
+    volumes:
+      - ./configs:/app/benchmark-config:ro
+    ports:
+      - "18080:8080"
+      - "19090:9090"
+    depends_on:
+      backend-a:
+        condition: service_healthy
+      backend-b:
+        condition: service_healthy
+      backend-c:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/api/runtime"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  proxy-init:
+    image: curlimages/curl:8.10.1
+    depends_on:
+      proxy:
+        condition: service_healthy
+    command:
+      - sh
+      - -c
+      - |
+        curl -fsS -X PUT http://proxy:9090/api/namespaces/default/config \
+          -H 'Content-Type: application/json' \
+          -d '{"name":"benchmark-check","routes":[{"id":"r-benchmark","enabled":true,"algorithm":"round_robin","match":{"hosts":["benchmark.localtest.me"],"path":{"type":"prefix","value":"/"}},"upstream_pool":"pool-benchmark"}],"upstream_pools":{"pool-benchmark":{"upstreams":["backend-a:8080","backend-b:8080","backend-c:8080"],"health_check":{"path":"/health","interval":"5s","timeout":"2s","expect_status":200}}}}'
+    restart: "no"
+
+  caddy:
+    image: caddy:2.9-alpine
+    volumes:
+      - ./proxies/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - "18081:8080"
+    depends_on:
+      backend-a:
+        condition: service_healthy
+      backend-b:
+        condition: service_healthy
+      backend-c:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/info"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  nginx:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./proxies/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "18082:8080"
+    depends_on:
+      backend-a:
+        condition: service_healthy
+      backend-b:
+        condition: service_healthy
+      backend-c:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/info"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  haproxy:
+    image: haproxy:3.1-alpine
+    volumes:
+      - ./proxies/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "18083:8080"
+    depends_on:
+      backend-a:
+        condition: service_healthy
+      backend-b:
+        condition: service_healthy
+      backend-c:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/info"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend-a:
+    build:
+      context: ../test-server
+      dockerfile: Dockerfile
+    environment:
+      SERVER_NAME: benchmark-a
+      SCENARIO_NAME: benchmark-check
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+      SLEEP_MS: "5"
+    ports:
+      - "18881:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend-b:
+    build:
+      context: ../test-server
+      dockerfile: Dockerfile
+    environment:
+      SERVER_NAME: benchmark-b
+      SCENARIO_NAME: benchmark-check
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+      SLEEP_MS: "5"
+    ports:
+      - "18882:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend-c:
+    build:
+      context: ../test-server
+      dockerfile: Dockerfile
+    environment:
+      SERVER_NAME: benchmark-c
+      SCENARIO_NAME: benchmark-check
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+      SLEEP_MS: "5"
+    ports:
+      - "18883:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
