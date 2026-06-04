@@ -1,0 +1,64 @@
+services:
+  healthy-a:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: healthy-a
+      SCENARIO_NAME: failure-healthcheck
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+    ports:
+      - "18281:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - failure-health-net
+
+  healthy-b:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: healthy-b
+      SCENARIO_NAME: failure-healthcheck
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+    ports:
+      - "18282:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - failure-health-net
+
+  unhealthy-c:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: unhealthy-c
+      SCENARIO_NAME: failure-healthcheck
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "503"
+    ports:
+      - "18283:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - failure-health-net
+
+networks:
+  failure-health-net:
+    name: failure-health-net
