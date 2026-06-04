@@ -1,0 +1,64 @@
+services:
+  tuple-a:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: tuple-a
+      SCENARIO_NAME: 5-tuple-hash-check
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+    ports:
+      - "18581:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - five-tuple-hash-net
+
+  tuple-b:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: tuple-b
+      SCENARIO_NAME: 5-tuple-hash-check
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+    ports:
+      - "18582:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - five-tuple-hash-net
+
+  tuple-c:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: tuple-c
+      SCENARIO_NAME: 5-tuple-hash-check
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "503"
+    ports:
+      - "18583:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - five-tuple-hash-net
+
+networks:
+  five-tuple-hash-net:
+    name: five-tuple-hash-net
