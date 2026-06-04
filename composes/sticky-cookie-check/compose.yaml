@@ -1,0 +1,64 @@
+services:
+  sticky-a:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: sticky-a
+      SCENARIO_NAME: sticky-cookie-check
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+    ports:
+      - "18481:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - sticky-cookie-net
+
+  sticky-b:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: sticky-b
+      SCENARIO_NAME: sticky-cookie-check
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+    ports:
+      - "18482:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - sticky-cookie-net
+
+  sticky-c:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: sticky-c
+      SCENARIO_NAME: sticky-cookie-check
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "503"
+    ports:
+      - "18483:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - sticky-cookie-net
+
+networks:
+  sticky-cookie-net:
+    name: sticky-cookie-net
