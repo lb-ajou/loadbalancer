@@ -1,0 +1,64 @@
+services:
+  rr-a:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: rr-a
+      SCENARIO_NAME: round-robin-check
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+    ports:
+      - "18381:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - round-robin-net
+
+  rr-b:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: rr-b
+      SCENARIO_NAME: round-robin-check
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+    ports:
+      - "18382:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - round-robin-net
+
+  rr-c:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: rr-c
+      SCENARIO_NAME: round-robin-check
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+    ports:
+      - "18383:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - round-robin-net
+
+networks:
+  round-robin-net:
+    name: round-robin-net
