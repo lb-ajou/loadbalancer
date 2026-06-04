@@ -1,0 +1,44 @@
+services:
+  route-alpha:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: route-alpha
+      SCENARIO_NAME: route-basic
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+    ports:
+      - "18081:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - route-basic-net
+
+  route-beta:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: route-beta
+      SCENARIO_NAME: route-basic
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+    ports:
+      - "18082:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - route-basic-net
+
+networks:
+  route-basic-net:
+    name: route-basic-net
