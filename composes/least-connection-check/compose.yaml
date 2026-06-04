@@ -1,0 +1,67 @@
+services:
+  lc-slow:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: lc-slow
+      SCENARIO_NAME: least-connection-check
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+      SLEEP_MS: "2500"
+    ports:
+      - "18681:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - least-connection-net
+
+  lc-fast:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: lc-fast
+      SCENARIO_NAME: least-connection-check
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+      SLEEP_MS: "0"
+    ports:
+      - "18682:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - least-connection-net
+
+  lc-unhealthy:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: lc-unhealthy
+      SCENARIO_NAME: least-connection-check
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "503"
+      SLEEP_MS: "0"
+    ports:
+      - "18683:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - least-connection-net
+
+networks:
+  least-connection-net:
+    name: least-connection-net
