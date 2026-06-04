@@ -1,0 +1,13 @@
+.bin
+.gocache
+.idea
+.env
+
+configs/proxy/
+internal/dashboard/static/*
+!.gitkeep
+
+plan/
+
+composes/raft-ha-cluster/.out/
+composes/raft-ha-vip/.out/
