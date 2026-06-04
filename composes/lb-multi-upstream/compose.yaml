@@ -1,0 +1,64 @@
+services:
+  lb-a:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: lb-a
+      SCENARIO_NAME: lb-multi-upstream
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+    ports:
+      - "18181:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - lb-multi-net
+
+  lb-b:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: lb-b
+      SCENARIO_NAME: lb-multi-upstream
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+    ports:
+      - "18182:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - lb-multi-net
+
+  lb-c:
+    build:
+      context: ../test-server
+    environment:
+      SERVER_NAME: lb-c
+      SCENARIO_NAME: lb-multi-upstream
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+    ports:
+      - "18183:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    networks:
+      - lb-multi-net
+
+networks:
+  lb-multi-net:
+    name: lb-multi-net
