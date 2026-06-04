@@ -1,0 +1,51 @@
+# Linux/Proxmox-only override for exposing proxy containers directly on an
+# external L2 segment through Docker macvlan.
+#
+# Before running this override, pass a VIP CIDR matching the selected LAN
+# subnet to the cluster bootstrap API.
+services:
+  backend-a:
+    networks:
+      raft-ha-vip-net:
+        ipv4_address: ${RAFT_HA_VIP_BACKEND_A_IP:-192.168.50.221}
+
+  backend-b:
+    networks:
+      raft-ha-vip-net:
+        ipv4_address: ${RAFT_HA_VIP_BACKEND_B_IP:-192.168.50.222}
+
+  backend-c:
+    networks:
+      raft-ha-vip-net:
+        ipv4_address: ${RAFT_HA_VIP_BACKEND_C_IP:-192.168.50.223}
+
+  proxy-1:
+    ports: !reset []
+    networks:
+      raft-ha-vip-net:
+        ipv4_address: ${RAFT_HA_VIP_NODE1_IP:-192.168.50.211}
+
+  proxy-2:
+    ports: !reset []
+    networks:
+      raft-ha-vip-net:
+        ipv4_address: ${RAFT_HA_VIP_NODE2_IP:-192.168.50.212}
+
+  proxy-3:
+    ports: !reset []
+    networks:
+      raft-ha-vip-net:
+        ipv4_address: ${RAFT_HA_VIP_NODE3_IP:-192.168.50.213}
+
+  observer:
+    profiles: ["bridge-only"]
+
+networks:
+  raft-ha-vip-net:
+    driver: macvlan
+    driver_opts:
+      parent: ${RAFT_HA_VIP_MACVLAN_PARENT:-ens18}
+    ipam:
+      config:
+        - subnet: ${RAFT_HA_VIP_MACVLAN_SUBNET:-192.168.50.0/24}
+          gateway: ${RAFT_HA_VIP_MACVLAN_GATEWAY:-192.168.50.1}

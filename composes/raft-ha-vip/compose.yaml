@@ -1,0 +1,179 @@
+services:
+  backend-a:
+    build:
+      context: .
+      dockerfile: Dockerfile.test-server
+    environment:
+      SERVER_NAME: backend-a
+      SCENARIO_NAME: raft-ha-vip
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 12
+      start_period: 3s
+    networks:
+      raft-ha-vip-net:
+
+  backend-b:
+    build:
+      context: .
+      dockerfile: Dockerfile.test-server
+    environment:
+      SERVER_NAME: backend-b
+      SCENARIO_NAME: raft-ha-vip
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 12
+      start_period: 3s
+    networks:
+      raft-ha-vip-net:
+
+  backend-c:
+    build:
+      context: .
+      dockerfile: Dockerfile.test-server
+    environment:
+      SERVER_NAME: backend-c
+      SCENARIO_NAME: raft-ha-vip
+      PORT: "8080"
+      SERVER_VERSION: v1
+      HEALTH_STATUS: "200"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 12
+      start_period: 3s
+    networks:
+      raft-ha-vip-net:
+
+  proxy-1:
+    build:
+      context: .
+      dockerfile: Dockerfile.proxy
+    command: ["/app/configs/node-1/app.json"]
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    depends_on:
+      backend-a:
+        condition: service_healthy
+      backend-b:
+        condition: service_healthy
+      backend-c:
+        condition: service_healthy
+    ports:
+      - "18080:8080"
+      - "19090:9090"
+      - "17001:7001"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/api/node/cluster-status"]
+      interval: 5s
+      timeout: 2s
+      retries: 30
+      start_period: 5s
+    volumes:
+      - ./configs:/app/configs:ro
+      - proxy-1-raft:/app/data/raft
+    networks:
+      raft-ha-vip-net:
+        ipv4_address: 172.30.10.11
+
+  proxy-2:
+    build:
+      context: .
+      dockerfile: Dockerfile.proxy
+    command: ["/app/configs/node-2/app.json"]
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    depends_on:
+      backend-a:
+        condition: service_healthy
+      backend-b:
+        condition: service_healthy
+      backend-c:
+        condition: service_healthy
+      proxy-1:
+        condition: service_healthy
+    restart: on-failure
+    ports:
+      - "18081:8080"
+      - "19091:9090"
+      - "17002:7002"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/api/node/cluster-status"]
+      interval: 5s
+      timeout: 2s
+      retries: 30
+      start_period: 5s
+    volumes:
+      - ./configs:/app/configs:ro
+      - proxy-2-raft:/app/data/raft
+    networks:
+      raft-ha-vip-net:
+        ipv4_address: 172.30.10.12
+
+  proxy-3:
+    build:
+      context: .
+      dockerfile: Dockerfile.proxy
+    command: ["/app/configs/node-3/app.json"]
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    depends_on:
+      backend-a:
+        condition: service_healthy
+      backend-b:
+        condition: service_healthy
+      backend-c:
+        condition: service_healthy
+      proxy-1:
+        condition: service_healthy
+    restart: on-failure
+    ports:
+      - "18082:8080"
+      - "19092:9090"
+      - "17003:7003"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/api/node/cluster-status"]
+      interval: 5s
+      timeout: 2s
+      retries: 30
+      start_period: 5s
+    volumes:
+      - ./configs:/app/configs:ro
+      - proxy-3-raft:/app/data/raft
+    networks:
+      raft-ha-vip-net:
+        ipv4_address: 172.30.10.13
+
+  observer:
+    image: busybox:1.31.1
+    command: ["sleep", "3600"]
+    networks:
+      raft-ha-vip-net:
+        ipv4_address: 172.30.10.50
+
+networks:
+  raft-ha-vip-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.10.0/24
+          gateway: 172.30.10.1
+
+volumes:
+  proxy-1-raft:
+  proxy-2-raft:
+  proxy-3-raft:
