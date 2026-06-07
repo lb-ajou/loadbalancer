@@ -20,8 +20,6 @@
 - `internal/dashboard/view.go`
 - `internal/admin/service.go`
 
-프론트엔드 마이그레이션용 endpoint/type 요약은 `docs/api/dashboard-frontend-api-migration.ko.md`를 함께 본다.
-
 ## Namespace 모델
 
 namespace는 proxy desired config의 논리 단위다.

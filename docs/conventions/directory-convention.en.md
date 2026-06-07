@@ -74,13 +74,13 @@ Intent:
 
 ### `docs/`
 
-Official home for human-readable architecture, convention, and harness notes.
+Official home for human-readable architecture, API, and convention notes.
 
 Intent:
 
 - preserve project structure intent
 - help future contributors understand package boundaries quickly
-- help coding agents recover architecture context
+- help operators and developers inspect API and runtime model contracts
 
 Current examples:
 
@@ -88,50 +88,20 @@ Current examples:
 - `docs/api/dashboard-api.ko.md`
 - `docs/conventions/directory-convention.ko.md`
 - `docs/conventions/type-reference.ko.md`
-- `docs/harness/agent-contract.md`
-- `docs/harness/harness.md`
-
-Note:
-
-- the legacy `convention/` directory may remain as a compatibility path while the repository transitions to `docs/`
-
-### `plan/`
-
-Working notes and implementation plans.
-
-Status:
-
-- intentionally git-ignored
-- useful for temporary planning, not for permanent repository convention
-
-Recommended directory:
-
-- `plan/tasks/`
-
-Intent:
-
-- store per-task specs based on `docs/harness/task-template.md`
-- capture task goals, test plans, and documentation impact notes
 
 ### `scripts/`
 
-Repository-local developer harness and helper commands.
+Project verification scripts, especially HA smoke tests.
 
 Current examples:
 
-- `scripts/agent-check.sh`
-- `scripts/agent-commit.sh`
-- `scripts/install-hooks.sh`
-- `scripts/validate-commit-msg.sh`
+- `scripts/raft-ha-cluster-smoke.sh`
+- `scripts/raft-ha-vip-smoke.sh`
 
-### `.githooks/`
+Rules:
 
-Repository-local Git hooks.
-
-Current examples:
-
-- `.githooks/pre-commit`
-- `.githooks/commit-msg`
+- automated checks tightly coupled to compose scenarios live in `scripts/`
+- reusable manual validation and benchmark helpers live in `tools/`
 
 ## `internal/` Package Intent
 

@@ -119,9 +119,8 @@ BENCHMARK_SESSION_NAME=baseline-20260419 tools/benchmark-matrix.sh
 tools/benchmark-summary.sh plan/benchmarks/baseline-20260419
 ```
 
-실제 반복 측정 예시는 아래 문서를 참고한다.
+실제 반복 측정 시나리오는 아래 문서를 참고한다.
 
-- `docs/architecture/benchmark-session-2026-04-19.ko.md`
 - `docs/architecture/rps-scenarios.ko.md`
 
 ## 결과 정리 기준

@@ -74,13 +74,13 @@
 
 ### `docs/`
 
-사람이 읽을 수 있는 구조, 설계, 하네스 문서의 공식 루트다.
+사람이 읽을 수 있는 구조, 설계, API, 컨벤션 문서의 공식 루트다.
 
 의도:
 
 - 프로젝트 구조 의도 보존
 - 이후 참여자가 패키지 경계를 빠르게 이해할 수 있게 함
-- 코딩 에이전트가 구조 컨텍스트를 복구할 수 있게 함
+- 운영자와 개발자가 API와 런타임 모델을 빠르게 확인할 수 있게 함
 
 현재 예:
 
@@ -88,50 +88,24 @@
 - `docs/api/dashboard-api.ko.md`
 - `docs/conventions/directory-convention.ko.md`
 - `docs/conventions/type-reference.ko.md`
-- `docs/harness/agent-contract.md`
-- `docs/harness/harness.md`
-
-참고:
-
-- 기존 `convention/` 디렉토리는 이전 문서 경로와의 호환을 위해 남아 있을 수 있다
-
-### `plan/`
-
-작업 계획과 임시 메모 디렉토리다.
-
-상태:
-
-- gitignore 대상
-- 영구 컨벤션 문서가 아니라 작업 중 참고용 문서 보관 용도
-
-권장 디렉토리:
-
-- `plan/tasks/`
-
-의도:
-
-- `docs/harness/task-template.md`를 기준으로 작업별 스펙 파일 보관
-- 현재 작업의 목표, 테스트 계획, 문서 영향 기록
 
 ### `scripts/`
 
-로컬 개발 하네스와 저장소 보조 명령을 둔다.
+HA smoke test처럼 프로젝트 검증에 필요한 실행 스크립트를 둔다.
 
 현재 예:
 
-- `scripts/agent-check.sh`
-- `scripts/agent-commit.sh`
-- `scripts/install-hooks.sh`
-- `scripts/validate-commit-msg.sh`
+- `scripts/raft-ha-cluster-smoke.sh`
+- `scripts/raft-ha-vip-smoke.sh`
 
 규칙:
 
-- 하네스 검증 로직이 커지면 책임별 보조 스크립트로 분리한다
-- 상위 진입점은 유지하되, 세부 검사 로직을 한 파일에 과도하게 누적하지 않는다
+- 특정 compose 시나리오와 강하게 묶인 자동 검증은 `scripts/`에 둔다
+- 범용 수동 검증과 benchmark 보조 명령은 `tools/`에 둔다
 
 ### `tools/`
 
-하네스 전용이 아닌 운영, 실험, 수동 검증용 보조 스크립트를 둔다.
+운영, 실험, 수동 검증, benchmark용 보조 스크립트를 둔다.
 
 현재 예:
 
