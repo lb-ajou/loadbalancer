@@ -87,6 +87,9 @@ namespace 이름은 `^[A-Za-z0-9._-]+$`만 허용한다.
 - `GET /api/runtime`
 - `GET /api/cluster`
 - `POST /api/cluster/join`
+- `GET /api/node/cluster-status`
+- `POST /api/cluster/bootstrap`
+- `POST /api/node/join-cluster`
 - `GET /api/namespaces`
 - `POST /api/namespaces`
 - `DELETE /api/namespaces/{namespace}`
@@ -650,7 +653,7 @@ Content-Type: application/json
 
 성공 시 `204 No Content`를 반환한다. 요청을 받은 노드가 leader가 아니면 설정 쓰기와 같은 `409 Conflict`, `code: "not_raft_leader"`, `leader_address` 응답을 반환한다. 시작 join 흐름은 해당 응답도 실패 후보로 기록하고 다음 join 주소를 계속 시도한다.
 
-`/api/raft/join`은 제거됐으며 `404 Not Found`를 반환한다. 문서, 스크립트, 프론트엔드는 `/api/cluster/join`만 사용한다.
+`/api/raft/join`은 제거됐으며 `404 Not Found`를 반환한다. Raft membership add 경로는 `/api/cluster/join`만 사용한다. 사용자가 새 노드를 클러스터에 가입시킬 때 호출하는 lifecycle 경로는 `/api/node/join-cluster`다.
 
 `/api/cluster/join`은 admin/control-plane endpoint다. 이 POC에는 내장 인증이 없으므로 보호된 admin network에만 노출하거나 외부 인증, network policy 뒤에 둔다.
 
