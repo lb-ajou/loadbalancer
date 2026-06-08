@@ -545,15 +545,11 @@ GET /api/node/cluster-status
 ```json
 {
   "state": "unconfigured",
-  "raft_data_dir": "data/raft",
-  "has_raft_state": false,
-  "raft_running": false,
-  "can_bootstrap": true,
-  "can_join": true
+  "raft_data_dir": "data/raft"
 }
 ```
 
-`state`는 `unconfigured`, `clustered`, `existing_state` 중 하나다. clean node에서는 `node_id`와 `raft_advertise_addr`가 아직 없을 수 있다. `last_error`가 있으면 Raft data dir 검사 중 오류가 발생한 것이다.
+`state`는 `unconfigured`, `clustered`, `existing_state`, `check_error` 중 하나다. clean node에서는 `node_id`와 `raft_advertise_addr`가 아직 없을 수 있다. `state`가 `check_error`이면 Raft data dir 검사 중 오류가 발생한 것이며, `last_error`에 원인이 포함된다.
 
 리더로 시작할 노드는 다음 API로 cluster를 만든다. VIP를 사용하는 경우 bootstrap 요청에서 cluster-wide VIP address를 함께 제공한다.
 

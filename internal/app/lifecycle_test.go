@@ -81,16 +81,25 @@ func TestBootstrapClusterStoresRaftTiming(t *testing.T) {
 	}
 }
 
-func TestClusterLifecycleStatusCleanNodeAllowsBootstrapAndJoin(t *testing.T) {
+func TestClusterLifecycleStatusCleanNodeIsUnconfigured(t *testing.T) {
 	dir := t.TempDir()
 	app := newTestLifecycleApp(t, dir)
 
 	view := app.ClusterLifecycleStatus(context.Background())
-	if view.State != "unconfigured" || !view.CanBootstrap || !view.CanJoin {
-		t.Fatalf("ClusterLifecycleStatus() = %+v, want unconfigured with actions", view)
+	if view.State != "unconfigured" {
+		t.Fatalf("ClusterLifecycleStatus() = %+v, want unconfigured", view)
 	}
-	if view.RaftRunning || view.HasRaftState {
-		t.Fatalf("ClusterLifecycleStatus() = %+v, want no raft state", view)
+}
+
+func TestClusterLifecycleStatusReportsCheckError(t *testing.T) {
+	app := &App{}
+
+	view := app.ClusterLifecycleStatus(context.Background())
+	if view.State != "check_error" {
+		t.Fatalf("ClusterLifecycleStatus() = %+v, want check_error", view)
+	}
+	if view.LastError == "" {
+		t.Fatalf("ClusterLifecycleStatus() = %+v, want last error", view)
 	}
 }
 
@@ -152,7 +161,7 @@ func TestRestoreRaftConfigPrefersLocalMetadata(t *testing.T) {
 	}
 }
 
-func TestClusterLifecycleStatusClusteredNodeDisablesActions(t *testing.T) {
+func TestClusterLifecycleStatusClusteredNodeReportsRunning(t *testing.T) {
 	dir := t.TempDir()
 	app := newTestLifecycleApp(t, dir)
 	err := app.BootstrapCluster(context.Background(), dashboard.ClusterBootstrapRequest{
@@ -166,11 +175,8 @@ func TestClusterLifecycleStatusClusteredNodeDisablesActions(t *testing.T) {
 	defer func() { _ = app.Shutdown(context.Background()) }()
 
 	view := app.ClusterLifecycleStatus(context.Background())
-	if view.State != "clustered" || !view.RaftRunning {
-		t.Fatalf("ClusterLifecycleStatus() = %+v, want clustered running", view)
-	}
-	if view.CanBootstrap || view.CanJoin {
-		t.Fatalf("ClusterLifecycleStatus() = %+v, want actions disabled", view)
+	if view.State != "clustered" {
+		t.Fatalf("ClusterLifecycleStatus() = %+v, want clustered", view)
 	}
 }
 

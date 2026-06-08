@@ -223,7 +223,7 @@ Raft desired state의 `default` namespace
 - `boot.Normalize()`는 clean node에 Raft node identity 기본값을 채우지 않는다. `raftDataDir` 같은 process-local 기본값만 채운다.
 - bootstrap/join lifecycle 입력에서 `raft_bind_addr`가 없으면 `raft_advertise_addr`의 port를 사용해 `0.0.0.0:<port>`로 기본값을 채운다.
 - 기존 Raft state가 없으면 clean node는 cluster를 자동 생성하지 않고 unconfigured control-plane으로 시작한다. cluster 생성은 `POST /api/cluster/bootstrap`, 가입은 `POST /api/node/join-cluster`가 담당한다.
-- 웹/CLI는 `GET /api/node/cluster-status`로 현재 노드가 bootstrap/join 가능한지 확인한다.
+- 웹/CLI는 `GET /api/node/cluster-status`의 `state`로 clean node, 기존 Raft state, 실행 중 cluster, 상태 조회 오류를 구분한다.
 - `reverseproxy cluster status|bootstrap|join`은 같은 dashboard lifecycle API를 호출하는 운영용 CLI다. 서버 실행은 기존 `reverseproxy [configPath]`와 새 `reverseproxy serve [configPath]`를 모두 지원한다.
 - `/cluster-lifecycle`은 같은 lifecycle API를 호출하는 웹 운영 화면이다. 기존 route/upstream SPA와 분리된 진입점이며, 파일 편집 없이 현재 노드를 bootstrap/join한다.
 - bootstrap/join으로 받은 Raft node identity와 bind/advertise address는 Raft data dir의 node-local metadata로 저장한다. 기존 Raft state가 있는 재시작 경로에서는 이 metadata에서 Raft identity를 복원한다. HA compose app config는 identity fields 없이 lifecycle CLI 입력으로 cluster를 만든다.

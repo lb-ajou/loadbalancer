@@ -14,7 +14,7 @@
 - `boot.Load()`와 `app.New()`는 `boot.Normalize()`로 local process 기본값을 채운 뒤 control-plane을 먼저 띄운다. 기존 Raft state가 없으면 cluster를 자동 bootstrap하지 않는다. 웹/CLI가 `POST /api/cluster/bootstrap` 또는 `POST /api/node/join-cluster`를 호출해야 Raft node가 생성된다. 기존 Raft state가 있으면 재시작 복원을 위해 Raft node를 자동으로 연다.
 - clean node의 local process config에는 Raft node ID, bind address, advertise address 기본값을 채우지 않는다.
 - bootstrap/join 요청의 `node_id`, `raft_bind_addr`, `raft_advertise_addr`는 Raft data dir 내부의 node-local metadata로 저장된다. 기존 Raft state가 있고 metadata가 있으면 재시작 시 app config보다 이 값을 우선 사용한다.
-- 웹/CLI는 `GET /api/node/cluster-status`로 `unconfigured`, `clustered`, `existing_state`와 bootstrap/join 가능 여부를 확인한다.
+- 웹/CLI는 `GET /api/node/cluster-status`의 `state`로 `unconfigured`, `clustered`, `existing_state`, `check_error`를 구분한다. `unconfigured`일 때만 bootstrap/join 입력을 제공한다.
 - `reverseproxy cluster ...` CLI는 dashboard API의 얇은 클라이언트다. 로컬 설정 파일이나 프록시 설정 JSON을 편집하지 않고, `status`, `bootstrap`, `join` 명령으로 각 노드의 control-plane에 HTTP 요청을 보낸다.
 - 단일 노드도 single-node Raft cluster로 취급한다.
 - VIP failover 설정은 cluster-wide 값과 node-local 값으로 나뉜다. `vip.address`, GARP 송신 횟수/간격, 획득 지연, 종료 시 release 정책은 Raft desired state에 들어갈 cluster 값이다. `vip.interface`는 노드가 속한 Linux 네트워크 환경에 종속되므로 Raft에 넣지 않고 bootstrap/join 시 각 노드가 제공하는 local 값으로 다룬다.

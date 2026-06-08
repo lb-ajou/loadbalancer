@@ -75,21 +75,18 @@ func (a *App) ClusterLifecycleStatus(ctx context.Context) dashboard.NodeClusterS
 	view := a.baseClusterLifecycleStatus()
 	if a.raftNode != nil {
 		view.State = "clustered"
-		view.RaftRunning = true
 		return view
 	}
 	hasState, err := raftstore.HasExistingState(a.cfg.RaftDataDir)
 	if err != nil {
+		view.State = "check_error"
 		view.LastError = err.Error()
 		return view
 	}
-	view.HasRaftState = hasState
 	if hasState {
 		view.State = "existing_state"
 		return view
 	}
-	view.CanBootstrap = true
-	view.CanJoin = true
 	return view
 }
 

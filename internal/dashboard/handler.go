@@ -78,10 +78,6 @@ type NodeClusterStatusView struct {
 	NodeID            string `json:"node_id,omitempty"`
 	RaftAdvertiseAddr string `json:"raft_advertise_addr,omitempty"`
 	RaftDataDir       string `json:"raft_data_dir,omitempty"`
-	HasRaftState      bool   `json:"has_raft_state"`
-	RaftRunning       bool   `json:"raft_running"`
-	CanBootstrap      bool   `json:"can_bootstrap"`
-	CanJoin           bool   `json:"can_join"`
 	LastError         string `json:"last_error,omitempty"`
 }
 

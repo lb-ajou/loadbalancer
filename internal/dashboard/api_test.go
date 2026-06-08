@@ -667,18 +667,28 @@ func TestNodeClusterStatusEndpoint_ReturnsLifecycleStatus(t *testing.T) {
 		nil,
 		nil,
 		stubLifecycle{status: NodeClusterStatusView{
-			State:        "unconfigured",
-			CanBootstrap: true,
-			CanJoin:      true,
+			State: "unconfigured",
 		}},
 	)
 
 	rec := performDashboardRequest(handler, http.MethodGet, "/api/node/cluster-status", "")
 	requireStatus(t, rec, http.StatusOK)
-	var body NodeClusterStatusView
+	var body map[string]interface{}
 	decodeJSON(t, rec, &body)
-	if body.State != "unconfigured" || !body.CanBootstrap || !body.CanJoin {
-		t.Fatalf("status body = %+v, want unconfigured actions", body)
+	if body["state"] != "unconfigured" {
+		t.Fatalf("status body = %+v, want unconfigured", body)
+	}
+	if _, ok := body["can_bootstrap"]; ok {
+		t.Fatalf("status body = %+v, want can_bootstrap omitted", body)
+	}
+	if _, ok := body["can_join"]; ok {
+		t.Fatalf("status body = %+v, want can_join omitted", body)
+	}
+	if _, ok := body["has_raft_state"]; ok {
+		t.Fatalf("status body = %+v, want has_raft_state omitted", body)
+	}
+	if _, ok := body["raft_running"]; ok {
+		t.Fatalf("status body = %+v, want raft_running omitted", body)
 	}
 }
 
