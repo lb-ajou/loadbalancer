@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"reverseproxy-poc/internal/admin"
-	"reverseproxy-poc/internal/raftstate"
+	"reverseproxy-poc/internal/config"
 	"reverseproxy-poc/internal/route"
 	"reverseproxy-poc/internal/runtime"
 	"reverseproxy-poc/internal/spec"
@@ -244,7 +244,7 @@ func runtimeEndpointSnapshot(t *testing.T) runtime.Snapshot {
 	}
 	pool.SetTargetUnhealthy(0, time.Unix(1700000100, 0).UTC(), "unexpected status: 503")
 	return runtime.Snapshot{
-		RaftIdentity: raftstate.Identity{NodeID: "node-1"},
+		RaftIdentity: config.RaftIdentity{NodeID: "node-1"},
 		ProxyConfigs: []spec.LoadedConfig{{
 			Source: "default",
 			Path:   "raft://namespaces/default",

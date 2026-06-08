@@ -295,15 +295,17 @@ HashiCorp Raft 기반 저장소 구현을 담당한다.
 - Raft 내부 구현 세부사항은 `internal/app`이나 API 계층으로 새지 않게 한다.
 - desired state 의미와 검증은 `internal/state`에 둔다.
 
-### `internal/raftstate`
+### `internal/config`
 
-runtime snapshot에 포함되는 Raft identity/timing 값을 표현한다.
+여러 계층에서 공유하는 작은 실행 설정 DTO를 표현한다.
 
 현재 역할:
 
 - node identity 표현
 - bind/advertise address 표현
 - cluster-wide Raft timing 표현
+- 현재 노드에 적용할 effective VIP config 표현
+- VIP 활성 여부 판단
 
 ### `internal/route`
 
@@ -374,15 +376,6 @@ Raft leader 기반 VIP failover를 담당한다.
 - `internal/app`은 controller wiring만 담당하고 netlink/raw ARP 세부 구현을 알지 않는다.
 - Linux 권한이 필요한 구현은 build tag로 분리해 일반 개발 환경의 단위 테스트를 막지 않는다.
 
-### `internal/vip/runtime`
-
-현재 노드에 실제 적용할 VIP runtime config를 담당한다.
-
-현재 역할:
-
-- cluster-wide VIP 정책과 node-local interface를 합성한 값 표현
-- VIP 활성 여부 판단
-
 ### `internal/runtime`
 
 활성 메모리 상태를 관리한다.
@@ -444,8 +437,8 @@ Dashboard UI와 JSON API를 담당한다.
 
 - `main` -> `cli`
 - `cli` -> `app`, `boot`
-- `app` -> `boot`, `state`, `raft`, `raftstate`, `runtime`, `proxy`, `dashboard`, `vip`
-- `state` -> `spec`, `route`, `upstream`, `runtime`, `raftstate`, `vip/runtime`
+- `app` -> `boot`, `config`, `state`, `raft`, `runtime`, `proxy`, `dashboard`, `vip`
+- `state` -> `config`, `spec`, `route`, `upstream`, `runtime`
 - `proxy` -> `runtime`, `route`, `upstream`
 - `route` -> `spec`
 - `upstream` -> `spec`
@@ -486,7 +479,8 @@ Dashboard UI와 JSON API를 담당한다.
 
 - process bootstrap -> `internal/boot`, `internal/cli`
 - desired state schema -> `internal/spec`, `internal/state`
-- runtime projection/policy -> `internal/route`, `internal/upstream`, `internal/runtime`, `internal/vip/runtime`
+- shared execution config -> `internal/config`
+- runtime projection/policy -> `internal/route`, `internal/upstream`, `internal/runtime`
 - application/API wiring -> `internal/app`, `internal/proxy`, `internal/dashboard`, `internal/admin`, `internal/raft`, `internal/vip`
 
 특별한 이유가 없다면 이 분리는 유지한다.

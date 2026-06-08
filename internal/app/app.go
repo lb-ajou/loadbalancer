@@ -18,15 +18,14 @@ import (
 
 	"reverseproxy-poc/internal/admin"
 	"reverseproxy-poc/internal/boot"
+	"reverseproxy-poc/internal/config"
 	"reverseproxy-poc/internal/dashboard"
 	"reverseproxy-poc/internal/proxy"
 	"reverseproxy-poc/internal/raft"
-	"reverseproxy-poc/internal/raftstate"
 	appruntime "reverseproxy-poc/internal/runtime"
 	"reverseproxy-poc/internal/state"
 	"reverseproxy-poc/internal/upstream"
 	internalvip "reverseproxy-poc/internal/vip"
-	vipruntime "reverseproxy-poc/internal/vip/runtime"
 )
 
 const raftJoinTimeout = 30 * time.Second
@@ -34,7 +33,7 @@ const raftJoinTimeout = 30 * time.Second
 type App struct {
 	logger           *log.Logger
 	cfg              boot.AppConfig
-	raftCfg          raftstate.Config
+	raftCfg          config.RaftConfig
 	state            *appruntime.State
 	mu               sync.Mutex
 	clusterMu        sync.Mutex
@@ -65,7 +64,7 @@ func New(cfg boot.AppConfig, _ string, logger *log.Logger) (*App, error) {
 }
 
 func newUnconfiguredApp(cfg boot.AppConfig, logger *log.Logger) (*App, error) {
-	snapshot, err := state.ProjectSnapshot(cfg, raftstate.Config{}, vipruntime.Config{}, state.DesiredState{})
+	snapshot, err := state.ProjectSnapshot(cfg, config.RaftConfig{}, config.VIPConfig{}, state.DesiredState{})
 	if err != nil {
 		return nil, err
 	}
@@ -86,22 +85,22 @@ func newUnconfiguredApp(cfg boot.AppConfig, logger *log.Logger) (*App, error) {
 		if err != nil {
 			return nil, err
 		}
-		if _, err := app.startRaft(cfg, restoreRaftCfg, vipruntime.Config{}, false); err != nil {
+		if _, err := app.startRaft(cfg, restoreRaftCfg, config.VIPConfig{}, false); err != nil {
 			return nil, err
 		}
 	}
 	return app, nil
 }
 
-func (a *App) restoreRaftConfig(cfg boot.AppConfig) (raftstate.Config, error) {
+func (a *App) restoreRaftConfig(cfg boot.AppConfig) (config.RaftConfig, error) {
 	localCfg, ok, err := raftstore.LoadLocalNodeConfig(cfg.RaftDataDir)
 	if err != nil {
-		return raftstate.Config{}, err
+		return config.RaftConfig{}, err
 	}
 	if !ok {
-		return raftstate.Config{}, nil
+		return config.RaftConfig{}, nil
 	}
-	return raftstate.Config{Identity: raftstate.Identity{
+	return config.RaftConfig{Identity: config.RaftIdentity{
 		NodeID:        localCfg.NodeID,
 		BindAddr:      localCfg.BindAddr,
 		AdvertiseAddr: localCfg.AdvertiseAddr,
@@ -186,7 +185,7 @@ type raftTiming struct {
 	CommitTimeout      time.Duration
 }
 
-func raftTimingFromConfig(cfg raftstate.Config) (raftTiming, error) {
+func raftTimingFromConfig(cfg config.RaftConfig) (raftTiming, error) {
 	heartbeat, err := parseOptionalDuration(cfg.Timing.HeartbeatTimeout)
 	if err != nil {
 		return raftTiming{}, err
@@ -194,7 +193,7 @@ func raftTimingFromConfig(cfg raftstate.Config) (raftTiming, error) {
 	return raftTimingFromConfigTail(cfg, heartbeat)
 }
 
-func raftTimingFromConfigTail(cfg raftstate.Config, heartbeat time.Duration) (raftTiming, error) {
+func raftTimingFromConfigTail(cfg config.RaftConfig, heartbeat time.Duration) (raftTiming, error) {
 	election, err := parseOptionalDuration(cfg.Timing.ElectionTimeout)
 	if err != nil {
 		return raftTiming{}, err
@@ -202,7 +201,7 @@ func raftTimingFromConfigTail(cfg raftstate.Config, heartbeat time.Duration) (ra
 	return raftTimingFromConfigLease(cfg, heartbeat, election)
 }
 
-func raftTimingFromConfigLease(cfg raftstate.Config, heartbeat, election time.Duration) (raftTiming, error) {
+func raftTimingFromConfigLease(cfg config.RaftConfig, heartbeat, election time.Duration) (raftTiming, error) {
 	lease, err := parseOptionalDuration(cfg.Timing.LeaderLeaseTimeout)
 	if err != nil {
 		return raftTiming{}, err
@@ -210,7 +209,7 @@ func raftTimingFromConfigLease(cfg raftstate.Config, heartbeat, election time.Du
 	return raftTimingFromConfigCommit(cfg, heartbeat, election, lease)
 }
 
-func raftTimingFromConfigCommit(cfg raftstate.Config, heartbeat, election, lease time.Duration) (raftTiming, error) {
+func raftTimingFromConfigCommit(cfg config.RaftConfig, heartbeat, election, lease time.Duration) (raftTiming, error) {
 	commit, err := parseOptionalDuration(cfg.Timing.CommitTimeout)
 	if err != nil {
 		return raftTiming{}, err

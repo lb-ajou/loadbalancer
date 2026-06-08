@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"reverseproxy-poc/internal/boot"
+	"reverseproxy-poc/internal/config"
 	"reverseproxy-poc/internal/dashboard"
-	"reverseproxy-poc/internal/raftstate"
 	"reverseproxy-poc/internal/upstream"
 )
 
@@ -180,8 +180,8 @@ func TestBootstrapClusterUsesRaftNodeConfig(t *testing.T) {
 }
 
 func TestRaftTimingFromConfig(t *testing.T) {
-	cfg := raftstate.Config{
-		Timing: raftstate.Timing{
+	cfg := config.RaftConfig{
+		Timing: config.RaftTiming{
 			HeartbeatTimeout:   "3s",
 			ElectionTimeout:    "5s",
 			LeaderLeaseTimeout: "2s",

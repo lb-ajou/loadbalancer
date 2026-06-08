@@ -4,11 +4,10 @@ import (
 	"testing"
 
 	"reverseproxy-poc/internal/boot"
-	"reverseproxy-poc/internal/raftstate"
+	"reverseproxy-poc/internal/config"
 	"reverseproxy-poc/internal/route"
 	"reverseproxy-poc/internal/spec"
 	"reverseproxy-poc/internal/upstream"
-	vipruntime "reverseproxy-poc/internal/vip/runtime"
 )
 
 func TestNewSnapshot_CopiesSlices(t *testing.T) {
@@ -23,7 +22,7 @@ func TestNewSnapshot_CopiesSlices(t *testing.T) {
 		{GlobalID: "default:r-api"},
 	}
 
-	snapshot := NewSnapshot(appCfg, raftstate.Identity{}, raftstate.Timing{}, vipruntime.Config{}, proxyCfgs, routes, nil)
+	snapshot := NewSnapshot(appCfg, config.RaftIdentity{}, config.RaftTiming{}, config.VIPConfig{}, proxyCfgs, routes, nil)
 
 	proxyCfgs[0].Source = "changed"
 	routes[0].GlobalID = "changed"
@@ -37,9 +36,9 @@ func TestNewSnapshot_CopiesSlices(t *testing.T) {
 }
 
 func TestNewSnapshot_ProjectsRuntimeVIP(t *testing.T) {
-	vip := vipruntime.Config{Interface: "eth0", Address: "10.10.0.100/24"}
+	vip := config.VIPConfig{Interface: "eth0", Address: "10.10.0.100/24"}
 
-	snapshot := NewSnapshot(boot.AppConfig{}, raftstate.Identity{}, raftstate.Timing{}, vip, nil, nil, nil)
+	snapshot := NewSnapshot(boot.AppConfig{}, config.RaftIdentity{}, config.RaftTiming{}, vip, nil, nil, nil)
 
 	if got, want := snapshot.VIP.Interface, "eth0"; got != want {
 		t.Fatalf("snapshot.VIP.Interface = %q, want %q", got, want)
@@ -52,9 +51,9 @@ func TestNewSnapshot_ProjectsRuntimeVIP(t *testing.T) {
 func TestStateSwap_ReplacesSnapshot(t *testing.T) {
 	initial := NewSnapshot(
 		boot.AppConfig{ProxyListenAddr: ":8080", DashboardListenAddr: ":9090"},
-		raftstate.Identity{},
-		raftstate.Timing{},
-		vipruntime.Config{},
+		config.RaftIdentity{},
+		config.RaftTiming{},
+		config.VIPConfig{},
 		nil,
 		nil,
 		nil,
@@ -64,9 +63,9 @@ func TestStateSwap_ReplacesSnapshot(t *testing.T) {
 
 	next := NewSnapshot(
 		boot.AppConfig{ProxyListenAddr: ":8081", DashboardListenAddr: ":9091"},
-		raftstate.Identity{},
-		raftstate.Timing{},
-		vipruntime.Config{},
+		config.RaftIdentity{},
+		config.RaftTiming{},
+		config.VIPConfig{},
 		nil,
 		nil,
 		nil,
@@ -96,9 +95,9 @@ func TestNewSnapshot_PreservesUpstreamRegistryReference(t *testing.T) {
 
 	snapshot := NewSnapshot(
 		boot.AppConfig{},
-		raftstate.Identity{},
-		raftstate.Timing{},
-		vipruntime.Config{},
+		config.RaftIdentity{},
+		config.RaftTiming{},
+		config.VIPConfig{},
 		nil,
 		nil,
 		registry,

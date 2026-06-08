@@ -215,8 +215,8 @@ Raft desired state의 `default` namespace
 예:
 
 - `configs/app.json`은 `internal/boot.fileConfig`가 정의한 listen 주소와 `raftDataDir` 같은 process-local 값만 담는다. 파일에 legacy `raftNodeId`, `raftBindAddr`, `raftAdvertiseAddr`, Raft timeout 키가 있어도 로더는 이를 Raft 입력으로 사용하지 않는다.
-- `boot.AppConfig`는 process-local 정적 설정 모델이다. listen 주소와 `raftDataDir`만 담고, Raft identity/timing은 `internal/raftstate` 런타임 값으로 분리한다. Runtime read path는 `Snapshot.RaftIdentity`, `Snapshot.RaftTiming`을 사용한다. VIP 적용 값도 `AppConfig`가 아니라 별도 lifecycle local VIP 입력과 Raft desired state를 합성한 `Snapshot.VIP`에만 둔다.
-- VIP cluster-wide 입력은 dashboard/CLI bootstrap request DTO가 받고, `state.NormalizeClusterVIP()`로 기본 GARP/acquire 정책을 채운 뒤 `state.ValidateClusterVIP()`으로 검증해 Raft desired state의 `state.ClusterVIPConfig`로 저장한다. `internal/vip/runtime`는 runtime에 적용할 합성 VIP 값을 표현하며, `boot` 패키지는 VIP DTO나 VIP policy 기본값을 갖지 않는다.
+- `boot.AppConfig`는 process-local 정적 설정 모델이다. listen 주소와 `raftDataDir`만 담고, Raft identity/timing은 `internal/config`의 공유 실행 설정 DTO로 표현한다. Runtime read path는 `Snapshot.RaftIdentity`, `Snapshot.RaftTiming`을 사용한다. VIP 적용 값도 `AppConfig`가 아니라 별도 lifecycle local VIP 입력과 Raft desired state를 합성한 `Snapshot.VIP`에만 둔다.
+- VIP cluster-wide 입력은 dashboard/CLI bootstrap request DTO가 받고, `state.NormalizeClusterVIP()`로 기본 GARP/acquire 정책을 채운 뒤 `state.ValidateClusterVIP()`으로 검증해 Raft desired state의 `state.ClusterVIPConfig`로 저장한다. `internal/config.VIPConfig`는 runtime에 적용할 합성 VIP 값을 표현하며, `boot` 패키지는 VIP DTO나 VIP policy 기본값을 갖지 않는다.
 - Raft node identity는 bootstrap/join 입력으로 받고, 성공 후 Raft data dir의 node-local metadata에 저장한다.
 - Raft timing은 bootstrap 입력의 `raft_timing`으로 받고, `state.ValidateClusterRaftTiming()`으로 검증한 뒤 Raft desired state에 cluster-wide 정책으로 저장한다.
 - Join node는 Raft node를 시작하기 전에 peer 후보의 `GET /api/cluster`에서 cluster-wide Raft timing을 조회해 local start config에 반영한다.

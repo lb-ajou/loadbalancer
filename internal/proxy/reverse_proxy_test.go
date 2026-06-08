@@ -9,11 +9,10 @@ import (
 	"time"
 
 	"reverseproxy-poc/internal/boot"
-	"reverseproxy-poc/internal/raftstate"
+	"reverseproxy-poc/internal/config"
 	"reverseproxy-poc/internal/route"
 	"reverseproxy-poc/internal/runtime"
 	"reverseproxy-poc/internal/upstream"
-	vipruntime "reverseproxy-poc/internal/vip/runtime"
 )
 
 func newTestRoute(algorithm string) route.Route {
@@ -39,12 +38,12 @@ func newRegistry(t *testing.T, raws ...string) *upstream.Registry {
 }
 
 func newProxyHandler(routes []route.Route, registry *upstream.Registry) http.Handler {
-	snapshot := runtime.NewSnapshot(boot.AppConfig{}, raftstate.Identity{}, raftstate.Timing{}, vipruntime.Config{}, nil, routes, registry)
+	snapshot := runtime.NewSnapshot(boot.AppConfig{}, config.RaftIdentity{}, config.RaftTiming{}, config.VIPConfig{}, nil, routes, registry)
 	return NewHandler(runtime.NewState(snapshot))
 }
 
 func newProxyHandlerWithConfig(appCfg boot.AppConfig, routes []route.Route, registry *upstream.Registry) http.Handler {
-	snapshot := runtime.NewSnapshot(appCfg, raftstate.Identity{NodeID: "node-2"}, raftstate.Timing{}, vipruntime.Config{}, nil, routes, registry)
+	snapshot := runtime.NewSnapshot(appCfg, config.RaftIdentity{NodeID: "node-2"}, config.RaftTiming{}, config.VIPConfig{}, nil, routes, registry)
 	return NewHandler(runtime.NewState(snapshot))
 }
 
@@ -138,7 +137,7 @@ func TestHandlerServeHTTP_ForwardsLBNodeHeader(t *testing.T) {
 }
 
 func TestHandlerServeHTTP_ReturnsNotFoundWhenNoRouteMatches(t *testing.T) {
-	snapshot := runtime.NewSnapshot(boot.AppConfig{}, raftstate.Identity{}, raftstate.Timing{}, vipruntime.Config{}, nil, nil, nil)
+	snapshot := runtime.NewSnapshot(boot.AppConfig{}, config.RaftIdentity{}, config.RaftTiming{}, config.VIPConfig{}, nil, nil, nil)
 	handler := NewHandler(runtime.NewState(snapshot))
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/api/users", nil)

@@ -4,18 +4,17 @@ import (
 	"time"
 
 	"reverseproxy-poc/internal/boot"
-	"reverseproxy-poc/internal/raftstate"
+	"reverseproxy-poc/internal/config"
 	"reverseproxy-poc/internal/route"
 	"reverseproxy-poc/internal/spec"
 	"reverseproxy-poc/internal/upstream"
-	vipruntime "reverseproxy-poc/internal/vip/runtime"
 )
 
 type Snapshot struct {
 	AppConfig    boot.AppConfig
-	RaftIdentity raftstate.Identity
-	RaftTiming   raftstate.Timing
-	VIP          vipruntime.Config
+	RaftIdentity config.RaftIdentity
+	RaftTiming   config.RaftTiming
+	VIP          config.VIPConfig
 	ProxyConfigs []spec.LoadedConfig
 	RouteTable   []route.Route
 	Upstreams    *upstream.Registry

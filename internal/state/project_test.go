@@ -4,9 +4,8 @@ import (
 	"testing"
 
 	"reverseproxy-poc/internal/boot"
-	"reverseproxy-poc/internal/raftstate"
+	"reverseproxy-poc/internal/config"
 	"reverseproxy-poc/internal/spec"
-	vipruntime "reverseproxy-poc/internal/vip/runtime"
 )
 
 func TestProjectSnapshot_BuildsRuntimeFromNamespaceMap(t *testing.T) {
@@ -32,7 +31,7 @@ func TestProjectSnapshot_BuildsRuntimeFromNamespaceMap(t *testing.T) {
 		},
 	}
 
-	snapshot, err := ProjectSnapshot(appCfg, raftstate.Config{}, vipruntime.Config{}, state)
+	snapshot, err := ProjectSnapshot(appCfg, config.RaftConfig{}, config.VIPConfig{}, state)
 	if err != nil {
 		t.Fatalf("ProjectSnapshot() error = %v", err)
 	}
@@ -63,7 +62,7 @@ func TestDesiredStatePathUsesRaftNamespaceMetadata(t *testing.T) {
 }
 
 func TestProjectSnapshot_RejectsInvalidDesiredConfig(t *testing.T) {
-	_, err := ProjectSnapshot(boot.AppConfig{}, raftstate.Config{}, vipruntime.Config{}, DesiredState{
+	_, err := ProjectSnapshot(boot.AppConfig{}, config.RaftConfig{}, config.VIPConfig{}, DesiredState{
 		Namespaces: map[string]spec.Config{
 			"default": {
 				Routes: []spec.RouteConfig{{
@@ -83,7 +82,7 @@ func TestProjectSnapshot_RejectsInvalidDesiredConfig(t *testing.T) {
 
 func TestProjectSnapshot_ProjectsRaftVIPWithLocalInterface(t *testing.T) {
 	appCfg := boot.AppConfig{}
-	localVIP := vipruntime.Config{Interface: "eth0"}
+	localVIP := config.VIPConfig{Interface: "eth0"}
 	state := DesiredState{
 		Namespaces: map[string]spec.Config{},
 		VIP: &ClusterVIPConfig{
@@ -95,7 +94,7 @@ func TestProjectSnapshot_ProjectsRaftVIPWithLocalInterface(t *testing.T) {
 		},
 	}
 
-	snapshot, err := ProjectSnapshot(appCfg, raftstate.Config{}, localVIP, state)
+	snapshot, err := ProjectSnapshot(appCfg, config.RaftConfig{}, localVIP, state)
 	if err != nil {
 		t.Fatalf("ProjectSnapshot() error = %v", err)
 	}
@@ -112,13 +111,13 @@ func TestProjectSnapshot_ProjectsRaftVIPWithLocalInterface(t *testing.T) {
 
 func TestProjectSnapshot_NormalizesClusterVIPDefaults(t *testing.T) {
 	appCfg := boot.AppConfig{}
-	localVIP := vipruntime.Config{Interface: "eth0"}
+	localVIP := config.VIPConfig{Interface: "eth0"}
 	state := DesiredState{
 		Namespaces: map[string]spec.Config{},
 		VIP:        &ClusterVIPConfig{Address: "10.10.0.100/24"},
 	}
 
-	snapshot, err := ProjectSnapshot(appCfg, raftstate.Config{}, localVIP, state)
+	snapshot, err := ProjectSnapshot(appCfg, config.RaftConfig{}, localVIP, state)
 	if err != nil {
 		t.Fatalf("ProjectSnapshot() error = %v", err)
 	}
@@ -141,7 +140,7 @@ func TestProjectSnapshot_ProjectsClusterRaftTiming(t *testing.T) {
 		},
 	}
 
-	snapshot, err := ProjectSnapshot(boot.AppConfig{}, raftstate.Config{}, vipruntime.Config{}, state)
+	snapshot, err := ProjectSnapshot(boot.AppConfig{}, config.RaftConfig{}, config.VIPConfig{}, state)
 	if err != nil {
 		t.Fatalf("ProjectSnapshot() error = %v", err)
 	}

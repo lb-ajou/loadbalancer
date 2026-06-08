@@ -10,13 +10,12 @@ import (
 	"github.com/hashicorp/raft"
 
 	"reverseproxy-poc/internal/boot"
+	"reverseproxy-poc/internal/config"
 	"reverseproxy-poc/internal/dashboard"
 	"reverseproxy-poc/internal/raft"
-	"reverseproxy-poc/internal/raftstate"
 	appruntime "reverseproxy-poc/internal/runtime"
 	"reverseproxy-poc/internal/spec"
 	"reverseproxy-poc/internal/state"
-	vipruntime "reverseproxy-poc/internal/vip/runtime"
 )
 
 const localLeaderWaitTimeout = 5 * time.Second
@@ -108,7 +107,7 @@ type startedRaft struct {
 	store *raftstore.Store
 }
 
-func (a *App) startRaft(cfg boot.AppConfig, raftCfg raftstate.Config, localVIP vipruntime.Config, bootstrap bool) (startedRaft, error) {
+func (a *App) startRaft(cfg boot.AppConfig, raftCfg config.RaftConfig, localVIP config.VIPConfig, bootstrap bool) (startedRaft, error) {
 	fsm := raftstore.NewFSMWithConfig(cfg, a.projectRaftApply(cfg, raftCfg, localVIP))
 	node, err := a.newRaftNode(cfg, raftCfg, bootstrap, fsm)
 	if err != nil {
@@ -128,7 +127,7 @@ func (a *App) startRaft(cfg boot.AppConfig, raftCfg raftstate.Config, localVIP v
 	return startedRaft{raft: node, store: store}, nil
 }
 
-func (a *App) projectRaftApply(cfg boot.AppConfig, raftCfg raftstate.Config, localVIP vipruntime.Config) func(state.DesiredState) {
+func (a *App) projectRaftApply(cfg boot.AppConfig, raftCfg config.RaftConfig, localVIP config.VIPConfig) func(state.DesiredState) {
 	return func(desired state.DesiredState) {
 		if a.raftNode == nil {
 			return
@@ -142,7 +141,7 @@ func (a *App) projectRaftApply(cfg boot.AppConfig, raftCfg raftstate.Config, loc
 	}
 }
 
-func (a *App) newRaftNode(cfg boot.AppConfig, raftCfg raftstate.Config, bootstrap bool, fsm *raftstore.FSM) (*raftstore.Node, error) {
+func (a *App) newRaftNode(cfg boot.AppConfig, raftCfg config.RaftConfig, bootstrap bool, fsm *raftstore.FSM) (*raftstore.Node, error) {
 	timing, err := raftTimingFromConfig(raftCfg)
 	if err != nil {
 		return nil, err
@@ -241,10 +240,10 @@ func (a *App) ensureCleanCluster() error {
 	return nil
 }
 
-func (a *App) bootstrapConfig(request dashboard.ClusterBootstrapRequest) (boot.AppConfig, raftstate.Config, vipruntime.Config, error) {
+func (a *App) bootstrapConfig(request dashboard.ClusterBootstrapRequest) (boot.AppConfig, config.RaftConfig, config.VIPConfig, error) {
 	cfg, raftCfg := a.baseLifecycleConfig(request.NodeID, request.RaftBindAddr, request.RaftAdvertiseAddr)
 	applyBootstrapRaftTiming(&raftCfg, request.RaftTiming)
-	localVIP := vipruntime.Config{Interface: request.VIPInterface}
+	localVIP := config.VIPConfig{Interface: request.VIPInterface}
 	if request.VIP != nil {
 		localVIP = applyBootstrapVIP(localVIP, request.VIP)
 	}
@@ -252,7 +251,7 @@ func (a *App) bootstrapConfig(request dashboard.ClusterBootstrapRequest) (boot.A
 	return normalized, raftCfg, localVIP, err
 }
 
-func applyBootstrapVIP(localVIP vipruntime.Config, request *dashboard.ClusterVIPRequest) vipruntime.Config {
+func applyBootstrapVIP(localVIP config.VIPConfig, request *dashboard.ClusterVIPRequest) config.VIPConfig {
 	vip := clusterVIPRequestConfig(request)
 	localVIP.Address = vip.Address
 	localVIP.GARPCount = vip.GARPCount
@@ -262,7 +261,7 @@ func applyBootstrapVIP(localVIP vipruntime.Config, request *dashboard.ClusterVIP
 	return localVIP
 }
 
-func applyBootstrapRaftTiming(cfg *raftstate.Config, timing *dashboard.ClusterRaftTimingRequest) {
+func applyBootstrapRaftTiming(cfg *config.RaftConfig, timing *dashboard.ClusterRaftTimingRequest) {
 	if timing == nil {
 		return
 	}
@@ -272,15 +271,15 @@ func applyBootstrapRaftTiming(cfg *raftstate.Config, timing *dashboard.ClusterRa
 	cfg.Timing.CommitTimeout = timing.CommitTimeout
 }
 
-func (a *App) joinConfig(request dashboard.NodeJoinClusterRequest, timing *dashboard.ClusterRaftTimingView) (boot.AppConfig, raftstate.Config, vipruntime.Config, error) {
+func (a *App) joinConfig(request dashboard.NodeJoinClusterRequest, timing *dashboard.ClusterRaftTimingView) (boot.AppConfig, config.RaftConfig, config.VIPConfig, error) {
 	cfg, raftCfg := a.baseLifecycleConfig(request.NodeID, request.RaftBindAddr, request.RaftAdvertiseAddr)
 	applyJoinRaftTiming(&raftCfg, timing)
-	localVIP := vipruntime.Config{Interface: request.VIPInterface}
+	localVIP := config.VIPConfig{Interface: request.VIPInterface}
 	normalized, err := boot.Normalize(cfg)
 	return normalized, raftCfg, localVIP, err
 }
 
-func applyJoinRaftTiming(cfg *raftstate.Config, timing *dashboard.ClusterRaftTimingView) {
+func applyJoinRaftTiming(cfg *config.RaftConfig, timing *dashboard.ClusterRaftTimingView) {
 	if timing == nil {
 		return
 	}
@@ -290,7 +289,7 @@ func applyJoinRaftTiming(cfg *raftstate.Config, timing *dashboard.ClusterRaftTim
 	cfg.Timing.CommitTimeout = timing.CommitTimeout
 }
 
-func (a *App) baseLifecycleConfig(nodeID, bindAddr, advertiseAddr string) (boot.AppConfig, raftstate.Config) {
+func (a *App) baseLifecycleConfig(nodeID, bindAddr, advertiseAddr string) (boot.AppConfig, config.RaftConfig) {
 	cfg := a.cfg
 	raftCfg := a.raftCfg
 	raftCfg.Identity.NodeID = nodeID
@@ -310,7 +309,7 @@ func defaultRaftBindAddrForAdvertise(advertiseAddr string) string {
 	return net.JoinHostPort("0.0.0.0", port)
 }
 
-func (a *App) persistLocalRaftConfig(cfg boot.AppConfig, raftCfg raftstate.Config) error {
+func (a *App) persistLocalRaftConfig(cfg boot.AppConfig, raftCfg config.RaftConfig) error {
 	return raftstore.SaveLocalNodeConfig(cfg.RaftDataDir, raftstore.LocalNodeConfig{
 		NodeID:        raftCfg.Identity.NodeID,
 		BindAddr:      raftCfg.Identity.BindAddr,

@@ -291,15 +291,17 @@ Rules:
 - Raft internals should not leak into `internal/app` or API layers
 - desired-state meaning and validation belong to `internal/state`
 
-### `internal/raftstate`
+### `internal/config`
 
-Runtime Raft identity and timing values.
+Small execution config DTOs shared across layers.
 
 Current role:
 
 - represent node identity
 - represent bind/advertise addresses
 - represent cluster-wide Raft timing
+- represent effective VIP config for the current node
+- determine whether VIP handling is active
 
 ### `internal/route`
 
@@ -370,15 +372,6 @@ Important boundaries:
 - `internal/app` only wires the controller and does not know netlink/raw ARP details
 - Linux-specific privileged implementation is build-tag separated
 
-### `internal/vip/runtime`
-
-Runtime VIP config applied by the current node.
-
-Current role:
-
-- represent the merged cluster-wide VIP policy and node-local interface
-- determine whether VIP handling is active
-
 ### `internal/runtime`
 
 Active in-memory state.
@@ -440,8 +433,8 @@ Intended dependency direction:
 
 - `main` -> `cli`
 - `cli` -> `app`, `boot`
-- `app` -> `boot`, `state`, `raft`, `raftstate`, `runtime`, `proxy`, `dashboard`, `vip`
-- `state` -> `spec`, `route`, `upstream`, `runtime`, `raftstate`, `vip/runtime`
+- `app` -> `boot`, `config`, `state`, `raft`, `runtime`, `proxy`, `dashboard`, `vip`
+- `state` -> `config`, `spec`, `route`, `upstream`, `runtime`
 - `proxy` -> `runtime`, `route`, `upstream`
 - `route` -> `spec`
 - `upstream` -> `spec`
@@ -482,7 +475,8 @@ Mapping:
 
 - process bootstrap -> `internal/boot`, `internal/cli`
 - desired-state schema -> `internal/spec`, `internal/state`
-- runtime projection/policy -> `internal/route`, `internal/upstream`, `internal/runtime`, `internal/vip/runtime`
+- shared execution config -> `internal/config`
+- runtime projection/policy -> `internal/route`, `internal/upstream`, `internal/runtime`
 - application/API wiring -> `internal/app`, `internal/proxy`, `internal/dashboard`, `internal/admin`, `internal/raft`, `internal/vip`
 
 Preserve this separation unless there is a strong reason to change it.

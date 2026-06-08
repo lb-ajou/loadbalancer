@@ -11,10 +11,9 @@ import (
 	"github.com/hashicorp/raft"
 
 	"reverseproxy-poc/internal/boot"
-	"reverseproxy-poc/internal/raftstate"
+	"reverseproxy-poc/internal/config"
 	"reverseproxy-poc/internal/spec"
 	control "reverseproxy-poc/internal/state"
-	vipruntime "reverseproxy-poc/internal/vip/runtime"
 )
 
 type FSM struct {
@@ -55,7 +54,7 @@ func (f *FSM) Apply(log *raft.Log) any {
 	if errs := validateDesiredState(next); len(errs) > 0 {
 		return applyError(validationError(spec.ValidationErrors(errs)))
 	}
-	if _, err := control.ProjectSnapshot(f.appCfg, raftstate.Config{}, vipruntime.Config{}, next); err != nil {
+	if _, err := control.ProjectSnapshot(f.appCfg, config.RaftConfig{}, config.VIPConfig{}, next); err != nil {
 		return applyError(validationError(err))
 	}
 

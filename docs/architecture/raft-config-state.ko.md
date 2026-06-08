@@ -6,8 +6,8 @@
 
 - Raft는 cluster desired state를 관리한다. route, upstream pool 같은 프록시 설정의 목표 상태와 cluster-wide VIP address/GARP 정책이 합의 대상이다.
 - `configs/app.json`은 노드 로컬 설정으로 남는다. listen 주소, dashboard 주소, Raft data dir처럼 프로세스별로 달라질 수 있는 값만 `fileConfig`로 읽고 Raft에는 넣지 않는다. 파일에 legacy Raft identity/timing 키가 있어도 로더는 이를 무시한다.
-- `boot.AppConfig`는 listen 주소와 `raftDataDir` 같은 process-local 정적 설정만 담는다. Raft identity/timing은 `internal/raftstate` 런타임 값으로 분리됐고, runtime read path는 `Snapshot.RaftIdentity`, `Snapshot.RaftTiming`을 사용한다. VIP runtime 값도 `AppConfig`에 두지 않고 lifecycle local VIP 입력과 Raft desired state를 합성한 `Snapshot.VIP`로만 노출한다.
-- cluster-wide VIP 값은 `state.NormalizeClusterVIP()`로 기본 GARP/acquire 정책을 채운 뒤 `state.ValidateClusterVIP()`으로 검증해 `state.ClusterVIPConfig`로 Raft desired state에 저장한다. `internal/vip/runtime`는 runtime에 적용할 합성 VIP 값을 표현하며, `boot` 패키지는 파일 입력용 VIP DTO나 VIP policy 기본값을 제공하지 않는다.
+- `boot.AppConfig`는 listen 주소와 `raftDataDir` 같은 process-local 정적 설정만 담는다. Raft identity/timing은 `internal/config`의 공유 실행 설정 DTO로 표현하고, runtime read path는 `Snapshot.RaftIdentity`, `Snapshot.RaftTiming`을 사용한다. VIP runtime 값도 `AppConfig`에 두지 않고 lifecycle local VIP 입력과 Raft desired state를 합성한 `Snapshot.VIP`로만 노출한다.
+- cluster-wide VIP 값은 `state.NormalizeClusterVIP()`로 기본 GARP/acquire 정책을 채운 뒤 `state.ValidateClusterVIP()`으로 검증해 `state.ClusterVIPConfig`로 Raft desired state에 저장한다. `internal/config.VIPConfig`는 runtime에 적용할 합성 VIP 값을 표현하며, `boot` 패키지는 파일 입력용 VIP DTO나 VIP policy 기본값을 제공하지 않는다.
 - Raft snapshot restore와 runtime projection 경계에서도 VIP policy를 `state.NormalizeClusterVIP()`로 정규화한다. 과거 snapshot에 address만 남아 있어도 runtime은 동일한 기본 GARP/acquire 정책을 사용한다.
 - Raft node ID, bind address, advertise address는 bootstrap/join 입력과 Raft data dir local metadata로 관리한다.
 - Raft heartbeat/election/leader lease/commit timeout은 bootstrap 요청의 `raft_timing`으로 입력받고 `state.ValidateClusterRaftTiming()`에서 검증한 뒤 Raft desired state에 cluster-wide 정책으로 저장한다. Join node는 Raft node를 시작하기 전에 peer 후보의 `GET /api/cluster`에서 timing을 조회해 같은 timing을 적용한다.

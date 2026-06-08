@@ -5,11 +5,10 @@ import (
 	"time"
 
 	"reverseproxy-poc/internal/boot"
-	"reverseproxy-poc/internal/raftstate"
+	"reverseproxy-poc/internal/config"
 	"reverseproxy-poc/internal/route"
 	"reverseproxy-poc/internal/spec"
 	"reverseproxy-poc/internal/upstream"
-	vipruntime "reverseproxy-poc/internal/vip/runtime"
 )
 
 type State struct {
@@ -25,9 +24,9 @@ func NewState(snapshot Snapshot) *State {
 
 func NewSnapshot(
 	appCfg boot.AppConfig,
-	raftIdentity raftstate.Identity,
-	raftTiming raftstate.Timing,
-	vip vipruntime.Config,
+	raftIdentity config.RaftIdentity,
+	raftTiming config.RaftTiming,
+	vip config.VIPConfig,
 	proxyCfgs []spec.LoadedConfig,
 	routes []route.Route,
 	upstreams *upstream.Registry,

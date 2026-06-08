@@ -1,6 +1,6 @@
-package runtime
+package config
 
-type Config struct {
+type VIPConfig struct {
 	Interface         string
 	Address           string
 	GARPCount         int
@@ -9,6 +9,6 @@ type Config struct {
 	ReleaseOnShutdown bool
 }
 
-func (c Config) Active() bool {
+func (c VIPConfig) Active() bool {
 	return c.Address != ""
 }

@@ -5,15 +5,14 @@ import (
 	"sort"
 
 	"reverseproxy-poc/internal/boot"
-	"reverseproxy-poc/internal/raftstate"
+	"reverseproxy-poc/internal/config"
 	"reverseproxy-poc/internal/route"
 	appruntime "reverseproxy-poc/internal/runtime"
 	"reverseproxy-poc/internal/spec"
 	"reverseproxy-poc/internal/upstream"
-	vipruntime "reverseproxy-poc/internal/vip/runtime"
 )
 
-func ProjectSnapshot(appCfg boot.AppConfig, raftCfg raftstate.Config, localVIP vipruntime.Config, desired DesiredState) (appruntime.Snapshot, error) {
+func ProjectSnapshot(appCfg boot.AppConfig, raftCfg config.RaftConfig, localVIP config.VIPConfig, desired DesiredState) (appruntime.Snapshot, error) {
 	runtimeVIP := projectClusterVIP(localVIP, desired.VIP)
 	raftTiming := projectClusterRaftTiming(raftCfg.Timing, desired.RaftTiming)
 	loaded, err := LoadedConfigs(desired)
@@ -35,7 +34,7 @@ func ProjectSnapshot(appCfg boot.AppConfig, raftCfg raftstate.Config, localVIP v
 	return snapshot, nil
 }
 
-func projectClusterVIP(runtimeVIP vipruntime.Config, vip *ClusterVIPConfig) vipruntime.Config {
+func projectClusterVIP(runtimeVIP config.VIPConfig, vip *ClusterVIPConfig) config.VIPConfig {
 	if vip == nil {
 		return runtimeVIP
 	}
@@ -48,7 +47,7 @@ func projectClusterVIP(runtimeVIP vipruntime.Config, vip *ClusterVIPConfig) vipr
 	return runtimeVIP
 }
 
-func projectClusterRaftTiming(runtimeTiming raftstate.Timing, timing *ClusterRaftTimingConfig) raftstate.Timing {
+func projectClusterRaftTiming(runtimeTiming config.RaftTiming, timing *ClusterRaftTimingConfig) config.RaftTiming {
 	if timing == nil {
 		return runtimeTiming
 	}

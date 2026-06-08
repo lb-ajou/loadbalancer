@@ -8,8 +8,8 @@ import (
 
 	"github.com/hashicorp/raft"
 
+	"reverseproxy-poc/internal/config"
 	"reverseproxy-poc/internal/vip"
-	vipruntime "reverseproxy-poc/internal/vip/runtime"
 )
 
 type vipRunner interface {
@@ -37,7 +37,7 @@ func (l raftLeadership) VerifyLeader(ctx context.Context) error {
 	}
 }
 
-func (a *App) configureVIP(cfg vipruntime.Config, node *raft.Raft) error {
+func (a *App) configureVIP(cfg config.VIPConfig, node *raft.Raft) error {
 	runner, err := newVIPController(cfg, node, a.logger)
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func (a *App) configureVIP(cfg vipruntime.Config, node *raft.Raft) error {
 	return nil
 }
 
-func (a *App) reconfigureVIP(cfg vipruntime.Config, node *raft.Raft) {
+func (a *App) reconfigureVIP(cfg config.VIPConfig, node *raft.Raft) {
 	a.stopVIPController()
 	runner, err := newVIPController(cfg, node, a.logger)
 	if err != nil {
@@ -62,7 +62,7 @@ func (a *App) reconfigureVIP(cfg vipruntime.Config, node *raft.Raft) {
 	}
 }
 
-func newVIPController(cfg vipruntime.Config, node *raft.Raft, logger *log.Logger) (vipRunner, error) {
+func newVIPController(cfg config.VIPConfig, node *raft.Raft, logger *log.Logger) (vipRunner, error) {
 	if !cfg.Active() {
 		return nil, nil
 	}
@@ -76,7 +76,7 @@ func newVIPController(cfg vipruntime.Config, node *raft.Raft, logger *log.Logger
 	return vip.NewController(vipConfig(cfg), raftLeadership{node}, manager, announcer, logger), nil
 }
 
-func newVIPNetwork(cfg vipruntime.Config) (vip.Manager, vip.Announcer, error) {
+func newVIPNetwork(cfg config.VIPConfig) (vip.Manager, vip.Announcer, error) {
 	garpInterval, err := time.ParseDuration(cfg.GARPInterval)
 	if err != nil {
 		return nil, nil, fmt.Errorf("parse vip garp interval: %w", err)
@@ -88,7 +88,7 @@ func newVIPNetwork(cfg vipruntime.Config) (vip.Manager, vip.Announcer, error) {
 	return newVIPAnnouncer(cfg, garpInterval, manager)
 }
 
-func newVIPAnnouncer(cfg vipruntime.Config, interval time.Duration, manager vip.Manager) (vip.Manager, vip.Announcer, error) {
+func newVIPAnnouncer(cfg config.VIPConfig, interval time.Duration, manager vip.Manager) (vip.Manager, vip.Announcer, error) {
 	announcer, err := vip.NewARPAnnouncer(cfg.Interface, cfg.Address, cfg.GARPCount, interval)
 	if err != nil {
 		return nil, nil, err
@@ -96,7 +96,7 @@ func newVIPAnnouncer(cfg vipruntime.Config, interval time.Duration, manager vip.
 	return manager, announcer, nil
 }
 
-func vipConfig(cfg vipruntime.Config) vip.Config {
+func vipConfig(cfg config.VIPConfig) vip.Config {
 	delay, _ := time.ParseDuration(cfg.AcquireDelay)
 	return vip.Config{
 		AcquireDelay:      delay,

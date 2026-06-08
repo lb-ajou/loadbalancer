@@ -52,7 +52,7 @@ configs/app.json
 │   ├── dashboard/            # Dashboard UI와 JSON API
 │   ├── proxy/                # reverse proxy handler
 │   ├── raft/                 # Raft node, store, FSM, snapshot
-│   ├── raftstate/            # Raft runtime 설정 타입
+│   ├── config/               # 계층 간 공유되는 실행 설정 DTO
 │   ├── route/                # route compile, sort, match, resolve
 │   ├── runtime/              # 적용된 runtime snapshot/state
 │   ├── spec/                 # proxy desired config schema와 validation

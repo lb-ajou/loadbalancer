@@ -1,17 +1,17 @@
-package raftstate
+package config
 
-type Config struct {
-	Identity Identity
-	Timing   Timing
+type RaftConfig struct {
+	Identity RaftIdentity
+	Timing   RaftTiming
 }
 
-type Identity struct {
+type RaftIdentity struct {
 	NodeID        string
 	BindAddr      string
 	AdvertiseAddr string
 }
 
-type Timing struct {
+type RaftTiming struct {
 	HeartbeatTimeout   string
 	ElectionTimeout    string
 	LeaderLeaseTimeout string

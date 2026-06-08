@@ -54,11 +54,10 @@ Raft desired state에 저장되는 목표 설정을 표현하는 타입이다.
 
 주요 패키지:
 
+- `internal/config`
 - `internal/route`
 - `internal/upstream`
 - `internal/runtime`
-- `internal/raftstate`
-- `internal/vip/runtime`
 
 예:
 
@@ -116,7 +115,7 @@ Raft desired state에 저장되는 목표 설정을 표현하는 타입이다.
 구분 포인트:
 
 - `AppConfig`는 프록시 설정 전체가 아니다.
-- Raft node identity와 timing은 `internal/raftstate`로 분리한다.
+- Raft node identity와 timing은 `internal/config`의 공유 실행 설정 DTO로 분리한다.
 - VIP address/GARP 정책은 `internal/state.ClusterVIPConfig`에 둔다.
 
 ## `internal/spec`
@@ -302,7 +301,7 @@ Raft desired state에 저장되는 목표 설정을 표현하는 타입이다.
 구분 포인트:
 
 - VIP network interface는 node-local 값이므로 이 타입에 두지 않는다.
-- runtime 적용 값은 `vip/runtime.Config`로 projection된다.
+- runtime 적용 값은 `config.VIPConfig`로 projection된다.
 
 ### `ClusterRaftTimingConfig`
 
@@ -341,9 +340,11 @@ Raft desired state에 저장되는 목표 설정을 표현하는 타입이다.
 - invalid namespace
 - invalid VIP policy
 
-## `internal/raftstate`
+## `internal/config`
 
-### `Config`
+여러 계층에서 공유하는 작은 실행 설정 DTO를 둔다. 파일 로딩, Raft 합의, runtime snapshot 자체를 담당하지 않는다.
+
+### `RaftConfig`
 
 역할:
 
@@ -351,10 +352,10 @@ Raft desired state에 저장되는 목표 설정을 표현하는 타입이다.
 
 대표 필드:
 
-- `Identity`
-- `Timing`
+- `RaftIdentity`
+- `RaftTiming`
 
-### `Identity`
+### `RaftIdentity`
 
 역할:
 
@@ -363,6 +364,36 @@ Raft desired state에 저장되는 목표 설정을 표현하는 타입이다.
 대표 필드:
 
 - `NodeID`
+- `BindAddr`
+- `AdvertiseAddr`
+
+### `RaftTiming`
+
+역할:
+
+- 현재 노드가 사용하는 effective Raft timing을 표현한다.
+
+대표 필드:
+
+- `HeartbeatTimeout`
+- `ElectionTimeout`
+- `LeaderLeaseTimeout`
+- `CommitTimeout`
+
+### `VIPConfig`
+
+역할:
+
+- 현재 노드에 실제 적용할 VIP 값을 표현한다.
+
+대표 필드:
+
+- `Interface`
+- `Address`
+- `GARPCount`
+- `GARPInterval`
+- `AcquireDelay`
+- `ReleaseOnShutdown`
 - `BindAddr`
 - `AdvertiseAddr`
 
@@ -524,20 +555,6 @@ Raft desired state에 저장되는 목표 설정을 표현하는 타입이다.
 - `Get(globalID)`
 - `All()`
 
-## `internal/vip/runtime`
-
-### `Config`
-
-역할:
-
-- 현재 노드에 실제 적용할 VIP 값을 표현한다.
-
-대표 필드:
-
-- `Interface`
-- `Address`
-- `GARPCount`
-- `GARPInterval`
 - `AcquireDelay`
 - `ReleaseOnShutdown`
 
@@ -700,11 +717,11 @@ Raft desired state에 저장되는 목표 설정을 표현하는 타입이다.
   - 현재 프로세스가 요청 처리에 사용하는 활성 상태
   - route table, upstream registry, Raft identity/timing, VIP runtime config 포함
 
-### `state.ClusterVIPConfig` vs `vip/runtime.Config`
+### `state.ClusterVIPConfig` vs `config.VIPConfig`
 
 - `ClusterVIPConfig`
   - Raft desired state에 저장되는 cluster-wide VIP 정책
-- `vip/runtime.Config`
+- `config.VIPConfig`
   - 현재 노드에 적용할 VIP 값
   - cluster-wide 정책과 node-local interface를 합성한 결과
 
@@ -750,15 +767,19 @@ Raft desired state에 저장되는 목표 설정을 표현하는 타입이다.
 
 그렇다면 보통 `internal/spec` 또는 `internal/state`에 둔다.
 
-### 3. 이 타입은 runtime 계산 결과인가?
+### 3. 이 타입은 여러 계층에서 공유하는 작은 실행 설정 DTO인가?
 
-그렇다면 보통 `internal/route`, `internal/upstream`, `internal/runtime`, `internal/vip/runtime`에 둔다.
+그렇다면 보통 `internal/config`에 둔다.
 
-### 4. 이 타입은 외부 API 응답용인가?
+### 4. 이 타입은 runtime 계산 결과인가?
+
+그렇다면 보통 `internal/route`, `internal/upstream`, `internal/runtime`에 둔다.
+
+### 5. 이 타입은 외부 API 응답용인가?
 
 그렇다면 보통 `internal/dashboard`에 view model로 둔다.
 
-### 5. 이 타입은 실제 실행 handler/controller 상태인가?
+### 6. 이 타입은 실제 실행 handler/controller 상태인가?
 
 그렇다면 `internal/proxy`, `internal/app`, `internal/raft`, `internal/vip`에 둔다.
 
@@ -770,7 +791,7 @@ Raft desired state에 저장되는 목표 설정을 표현하는 타입이다.
   - process-local bootstrap 설정
 - `spec`, `state`
   - Raft desired state와 검증
-- `route`, `upstream`, `runtime`, `raftstate`, `vip/runtime`
+- `config`, `route`, `upstream`, `runtime`
   - 실행을 위한 runtime 도메인 타입
 - `dashboard`
   - 외부 API 응답 view model
