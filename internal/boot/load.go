@@ -1,9 +1,11 @@
 package boot
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -22,8 +24,13 @@ func Load(path string) (AppConfig, error) {
 		return AppConfig{}, fmt.Errorf("read config: %w", err)
 	}
 	var cfg fileConfig
-	if err := json.Unmarshal(data, &cfg); err != nil {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&cfg); err != nil {
 		return AppConfig{}, fmt.Errorf("decode config: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		return AppConfig{}, errors.New("decode config: config must contain a single JSON object")
 	}
 	return normalizeFileConfig(cfg)
 }

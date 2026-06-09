@@ -10,24 +10,10 @@ import (
 	"reverseproxy-poc/internal/upstream"
 )
 
-const legacyConfigStoreValue = "raft"
-
 type RuntimeView struct {
 	AppliedAt time.Time             `json:"applied_at"`
-	Node      RuntimeNodeView       `json:"node"`
-	Config    RuntimeConfigView     `json:"config"`
 	Routes    []RouteView           `json:"routes"`
 	Upstreams []RuntimeUpstreamView `json:"upstreams"`
-}
-
-type RuntimeNodeView struct {
-	ID          string `json:"id,omitempty"`
-	ConfigStore string `json:"config_store"`
-}
-
-type RuntimeConfigView struct {
-	RouteCount        int `json:"route_count"`
-	UpstreamPoolCount int `json:"upstream_pool_count"`
 }
 
 type RuntimeUpstreamView struct {
@@ -53,7 +39,6 @@ type StatusView struct {
 
 type StatusNodeView struct {
 	ID                  string         `json:"id,omitempty"`
-	ConfigStore         string         `json:"config_store"`
 	ProxyListenAddr     string         `json:"proxy_listen_addr"`
 	DashboardListenAddr string         `json:"dashboard_listen_addr"`
 	AppliedAt           time.Time      `json:"applied_at"`
@@ -146,8 +131,6 @@ type PathMatcherView struct {
 func buildRuntimeView(snapshot runtime.Snapshot) RuntimeView {
 	return RuntimeView{
 		AppliedAt: snapshot.AppliedAt,
-		Node:      buildRuntimeNodeView(snapshot),
-		Config:    buildRuntimeConfigView(snapshot.ProxyConfig),
 		Routes:    buildRouteViews(snapshot.RouteTable),
 		Upstreams: buildRuntimeUpstreamViews(snapshot.Upstreams),
 	}
@@ -171,15 +154,10 @@ func vipStatusFromSnapshot(snapshot runtime.Snapshot) VIPStatusView {
 	return VIPStatusView{Enabled: cfg.Active(), Interface: cfg.Interface, Address: cfg.Address}
 }
 
-func buildRuntimeNodeView(snapshot runtime.Snapshot) RuntimeNodeView {
-	return RuntimeNodeView{ID: snapshot.RaftIdentity.NodeID, ConfigStore: legacyConfigStoreString()}
-}
-
 func buildStatusNodeView(snapshot runtime.Snapshot) StatusNodeView {
 	cfg := snapshot.AppConfig
 	return StatusNodeView{
 		ID:                  snapshot.RaftIdentity.NodeID,
-		ConfigStore:         legacyConfigStoreString(),
 		ProxyListenAddr:     cfg.ProxyListenAddr,
 		DashboardListenAddr: cfg.DashboardListenAddr,
 		AppliedAt:           snapshot.AppliedAt,
@@ -217,17 +195,6 @@ func buildStatusRuntimeView(snapshot runtime.Snapshot) StatusRuntimeView {
 		TargetCount:          countTargets(views),
 		HealthyTargetCount:   countTargetsByHealth(views, true),
 		UnhealthyTargetCount: countTargetsByHealth(views, false),
-	}
-}
-
-func legacyConfigStoreString() string {
-	return legacyConfigStoreValue
-}
-
-func buildRuntimeConfigView(cfg spec.Config) RuntimeConfigView {
-	return RuntimeConfigView{
-		RouteCount:        len(cfg.Routes),
-		UpstreamPoolCount: len(cfg.UpstreamPools),
 	}
 }
 

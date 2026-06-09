@@ -109,15 +109,11 @@
 
 ## Runtime API
 
-`GET /api/runtime`은 현재 runtime snapshot을 반환한다. 설정 관련 요약은 단일 config 기준이다.
+`GET /api/runtime`은 현재 노드에 적용된 route/upstream runtime detail을 반환한다. 노드 요약과 count summary는 `GET /api/status`를 사용한다.
 
 ```json
 {
   "applied_at": "2026-06-09T00:00:00Z",
-  "config": {
-    "route_count": 1,
-    "upstream_pool_count": 1
-  },
   "routes": [
     {
       "id": "r-api",

@@ -3,6 +3,7 @@ package boot
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -76,25 +77,34 @@ func TestLoad_RootAppConfigIsSingleNodeRaft(t *testing.T) {
 	}
 }
 
-func TestLoad_IgnoresStaticRaftRuntimeFields(t *testing.T) {
+func TestLoad_RejectsUnknownFields(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "app.json")
 	writeConfigFile(t, path, `{
-	  "raftNodeId": "node-file",
-	  "raftBindAddr": "127.0.0.1:7101",
-	  "raftAdvertiseAddr": "127.0.0.1:7101",
-	  "raftHeartbeatTimeout": "3s",
-	  "raftElectionTimeout": "5s",
-	  "raftLeaderLeaseTimeout": "2s",
-	  "raftCommitTimeout": "250ms"
+	  "proxyListenAddr": ":18080",
+	  "raftNodeId": "node-file"
 	}`)
 
-	cfg, err := Load(path)
-	if err != nil {
-		t.Fatalf("Load() error = %v", err)
+	_, err := Load(path)
+	if err == nil {
+		t.Fatal("Load() error = nil, want unknown field error")
 	}
-	if got, want := cfg.RaftDataDir, DefaultRaftDataDir; got != want {
-		t.Fatalf("RaftDataDir = %q, want %q", got, want)
+	if !strings.Contains(err.Error(), `unknown field "raftNodeId"`) {
+		t.Fatalf("Load() error = %v, want unknown raftNodeId field", err)
+	}
+}
+
+func TestLoad_RejectsMultipleJSONValues(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "app.json")
+	writeConfigFile(t, path, `{"proxyListenAddr":":18080"} {}`)
+
+	_, err := Load(path)
+	if err == nil {
+		t.Fatal("Load() error = nil, want single JSON object error")
+	}
+	if !strings.Contains(err.Error(), "config must contain a single JSON object") {
+		t.Fatalf("Load() error = %v, want single JSON object error", err)
 	}
 }
 

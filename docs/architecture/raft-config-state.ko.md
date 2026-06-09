@@ -5,7 +5,7 @@
 ## 핵심 규칙
 
 - Raft는 cluster desired state를 관리한다. route, upstream pool 같은 프록시 설정의 목표 상태와 cluster-wide VIP address/GARP 정책이 합의 대상이다.
-- `configs/app.json`은 노드 로컬 설정으로 남는다. listen 주소, dashboard 주소, Raft data dir처럼 프로세스별로 달라질 수 있는 값만 `fileConfig`로 읽고 Raft에는 넣지 않는다. 파일에 legacy Raft identity/timing 키가 있어도 로더는 이를 무시한다.
+- `configs/app.json`은 노드 로컬 설정으로 남는다. listen 주소, dashboard 주소, Raft data dir처럼 프로세스별로 달라질 수 있는 값만 `fileConfig`로 읽고 Raft에는 넣지 않는다. 로더는 unknown field를 거부하므로 Raft identity/timing 같은 lifecycle 입력은 bootstrap/join API나 Raft data dir local metadata를 통해서만 관리한다.
 - `boot.AppConfig`는 listen 주소와 `raftDataDir` 같은 process-local 정적 설정만 담는다. Raft identity/timing은 `internal/config`의 공유 실행 설정 DTO로 표현하고, runtime read path는 `Snapshot.RaftIdentity`, `Snapshot.RaftTiming`을 사용한다. VIP runtime 값도 `AppConfig`에 두지 않고 lifecycle local VIP 입력과 Raft desired state를 합성한 `Snapshot.VIP`로만 노출한다.
 - cluster-wide VIP 값은 `state.NormalizeClusterVIP()`로 기본 GARP/acquire 정책을 채운 뒤 `state.ValidateClusterVIP()`으로 검증해 `state.ClusterVIPConfig`로 Raft desired state에 저장한다. `internal/config.VIPConfig`는 runtime에 적용할 합성 VIP 값을 표현하며, `boot` 패키지는 파일 입력용 VIP DTO나 VIP policy 기본값을 제공하지 않는다.
 - Raft snapshot restore와 runtime projection 경계에서도 VIP policy를 `state.NormalizeClusterVIP()`로 정규화한다. 과거 snapshot에 address만 남아 있어도 runtime은 동일한 기본 GARP/acquire 정책을 사용한다.
@@ -18,7 +18,7 @@
 - `reverseproxy cluster ...` CLI는 dashboard API의 얇은 클라이언트다. 로컬 설정 파일이나 프록시 설정 JSON을 편집하지 않고, `status`, `bootstrap`, `join` 명령으로 각 노드의 control-plane에 HTTP 요청을 보낸다.
 - 단일 노드도 single-node Raft cluster로 취급한다.
 - VIP failover 설정은 cluster-wide 값과 node-local 값으로 나뉜다. `vip.address`, GARP 송신 횟수/간격, 획득 지연, 종료 시 release 정책은 Raft desired state에 들어갈 cluster 값이다. `vip.interface`는 노드가 속한 Linux 네트워크 환경에 종속되므로 Raft에 넣지 않고 bootstrap/join 시 각 노드가 제공하는 local 값으로 다룬다.
-- `vip.enabled` 입력은 설정 모델에서 제거됐다. 현재 `/api/status`의 `vip.enabled` 응답은 호환 필드로 유지하되, 설정 입력에서는 VIP address가 있으면 VIP가 활성인 것으로 본다.
+- `vip.enabled` 입력은 설정 모델에서 제거됐다. 현재 `/api/status`의 `vip.enabled` 응답은 `vip.address` 존재 여부에서 계산되는 상태 필드이며, 설정 입력에서는 VIP address가 있으면 VIP가 활성인 것으로 본다.
 - 프록시 route/upstream JSON은 더 이상 앱 부팅 입력이 아니다. 새 Raft bootstrap node는 빈 desired state로 시작하고, 초기 route/upstream도 Admin API 쓰기를 통해 Raft log에 기록한다.
 - Raft log에는 proxy config 전체 교체, cluster VIP, Raft timing 단위의 command만 기록한다. route/upstream pool 개별 변경 command나 JSON seed/import 전용 command는 없다.
 - 기존 Raft data dir이 있으면 재시작한 노드는 남아 있는 Raft log/snapshot에서 desired config를 복원한다. 로컬 프록시 JSON 파일을 다시 읽어 클러스터 상태를 덮어쓰지 않는다.

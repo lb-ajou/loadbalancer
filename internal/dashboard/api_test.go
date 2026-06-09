@@ -282,18 +282,9 @@ func TestRuntimeEndpoint_ReturnsConsolidatedRuntimeView(t *testing.T) {
 	requireStatus(t, rec, http.StatusOK)
 	var body RuntimeView
 	decodeJSON(t, rec, &body)
-	if got, want := body.Node.ID, "node-1"; got != want {
-		t.Fatalf("Node.ID = %q, want %q", got, want)
-	}
 	requireCount(t, "Routes", len(body.Routes), 1)
 	requireCount(t, "Upstreams", len(body.Upstreams), 1)
 	requireCount(t, "Targets", len(body.Upstreams[0].Targets), 1)
-	if got, want := body.Config.RouteCount, 1; got != want {
-		t.Fatalf("Config.RouteCount = %d, want %d", got, want)
-	}
-	if got, want := body.Config.UpstreamPoolCount, 1; got != want {
-		t.Fatalf("Config.UpstreamPoolCount = %d, want %d", got, want)
-	}
 	if got, want := body.Routes[0].ID, "r-api"; got != want {
 		t.Fatalf("Routes[0].ID = %q, want %q", got, want)
 	}
@@ -311,28 +302,6 @@ func TestRuntimeEndpoint_ReturnsConsolidatedRuntimeView(t *testing.T) {
 	decodeJSON(t, performDashboardRequest(handler, http.MethodGet, "/api/runtime", ""), &raw)
 	if _, ok := raw["config_sources"]; ok {
 		t.Fatalf("runtime body = %+v, want config_sources omitted", raw)
-	}
-}
-
-func TestRuntimeEndpointReturnsRaftConfigStore(t *testing.T) {
-	handler := NewHandler(runtime.NewState(runtime.Snapshot{}), stubService{})
-	rec := performDashboardRequest(handler, http.MethodGet, "/api/runtime", "")
-	requireStatus(t, rec, http.StatusOK)
-	var body RuntimeView
-	decodeJSON(t, rec, &body)
-	if got := body.Node.ConfigStore; got != legacyConfigStoreValue {
-		t.Fatalf("ConfigStore = %q, want raft", got)
-	}
-}
-
-func TestStatusEndpointReturnsRaftConfigStore(t *testing.T) {
-	handler := NewHandler(runtime.NewState(runtime.Snapshot{}), stubService{})
-	rec := performDashboardRequest(handler, http.MethodGet, "/api/status", "")
-	requireStatus(t, rec, http.StatusOK)
-	var body StatusView
-	decodeJSON(t, rec, &body)
-	if got := body.Node.ConfigStore; got != legacyConfigStoreValue {
-		t.Fatalf("ConfigStore = %q, want raft", got)
 	}
 }
 
