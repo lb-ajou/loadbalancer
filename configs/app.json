@@ -1,5 +1,5 @@
 {
   "proxyListenAddr": ":8080",
   "dashboardListenAddr": ":9090",
-  "raftDataDir": "data/raft"
+  "raftDataDir": "configs/data"
 }
