@@ -103,7 +103,6 @@ go run .
 
 - Proxy: `http://localhost:8080`
 - Dashboard: `http://localhost:9090`
-- Cluster lifecycle page: `http://localhost:9090/cluster-lifecycle`
 
 ## 빌드
 

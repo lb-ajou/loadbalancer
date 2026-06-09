@@ -639,22 +639,6 @@ func TestSPAPath_ReturnsDashboardHTML(t *testing.T) {
 	}
 }
 
-func TestClusterLifecyclePage_ReturnsLifecycleHTML(t *testing.T) {
-	handler := NewHandler(runtime.NewState(runtime.Snapshot{}), stubService{})
-	rec := performDashboardRequest(handler, http.MethodGet, "/cluster-lifecycle", "")
-	requireStatus(t, rec, http.StatusOK)
-	if got := rec.Result().Header.Get("Content-Type"); !strings.Contains(got, "text/html") {
-		t.Fatalf("Content-Type = %q, want text/html", got)
-	}
-	body := rec.Body.String()
-	if !strings.Contains(body, "Cluster Lifecycle") {
-		t.Fatalf("body did not contain lifecycle page title")
-	}
-	if !strings.Contains(body, "/api/node/cluster-status") {
-		t.Fatalf("body did not contain cluster status API call")
-	}
-}
-
 func TestUnknownAPIPath_ReturnsNotFound(t *testing.T) {
 	handler := NewHandler(runtime.NewState(runtime.Snapshot{}), stubService{})
 	req := httptest.NewRequest(http.MethodGet, "/api/unknown", nil)

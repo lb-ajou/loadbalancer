@@ -20,9 +20,6 @@ import (
 //go:embed static/index.html
 var dashboardHTML []byte
 
-//go:embed static/cluster-lifecycle.html
-var clusterLifecycleHTML []byte
-
 type RaftJoiner interface {
 	JoinRaft(ctx context.Context, nodeID, raftAddress string) error
 }
@@ -115,7 +112,6 @@ func NewHandlerWithProviders(
 	}
 	registerConfigAPI(mux, service)
 	registerRuntimeAPI(mux, state, clusterProvider, vipProvider)
-	registerClusterLifecyclePage(mux)
 	registerSPA(mux)
 
 	return mux
@@ -343,21 +339,6 @@ func registerSPA(mux *http.ServeMux) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(dashboardHTML))
 	})
-}
-
-func registerClusterLifecyclePage(mux *http.ServeMux) {
-	mux.HandleFunc("/cluster-lifecycle", clusterLifecyclePageHandler())
-}
-
-func clusterLifecyclePageHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet && r.Method != http.MethodHead {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		http.ServeContent(w, r, "cluster-lifecycle.html", time.Time{}, bytes.NewReader(clusterLifecycleHTML))
-	}
 }
 
 func newMethodNotAllowedError() *admin.APIError {
