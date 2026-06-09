@@ -13,55 +13,62 @@ import (
 	control "reverseproxy-poc/internal/state"
 )
 
-func TestStoreReturnsNotLeaderWhenNodeIsFollower(t *testing.T) {
+func TestStoreReplaceConfigReturnsNotLeaderWhenNodeIsFollower(t *testing.T) {
 	store := NewStore(&fakeRaft{leader: "127.0.0.1:7001", state: raft.Follower}, NewFSM())
 
-	_, err := store.CreateNamespace(context.Background(), "admin")
+	_, err := store.ReplaceConfig(context.Background(), spec.Config{})
 	if err == nil {
-		t.Fatal("CreateNamespace() error = nil, want not leader")
+		t.Fatal("ReplaceConfig() error = nil, want not leader")
 	}
 	if !control.IsNotLeader(err) {
-		t.Fatalf("CreateNamespace() error = %v, want not leader", err)
-	}
-}
-
-func TestStoreReplaceNamespaceConfigReturnsNotLeaderWhenNodeIsFollower(t *testing.T) {
-	store := NewStore(&fakeRaft{leader: "127.0.0.1:7001", state: raft.Follower}, NewFSM())
-
-	_, err := store.ReplaceNamespaceConfig(context.Background(), "admin", spec.Config{})
-	if err == nil {
-		t.Fatal("ReplaceNamespaceConfig() error = nil, want not leader")
-	}
-	if !control.IsNotLeader(err) {
-		t.Fatalf("ReplaceNamespaceConfig() error = %v, want not leader", err)
+		t.Fatalf("ReplaceConfig() error = %v, want not leader", err)
 	}
 }
 
 func TestStoreReturnsNotLeaderBeforeWriteValidationOnFollower(t *testing.T) {
 	store := NewStore(&fakeRaft{leader: "127.0.0.1:7001", state: raft.Follower}, NewFSM())
 
-	_, err := store.CreateNamespace(context.Background(), "bad:name")
+	_, err := store.ReplaceConfig(context.Background(), invalidStoreConfig())
 	if err == nil {
-		t.Fatal("CreateNamespace() error = nil, want not leader")
+		t.Fatal("ReplaceConfig() error = nil, want not leader")
 	}
 	if !control.IsNotLeader(err) {
-		t.Fatalf("CreateNamespace() error = %v, want not leader", err)
+		t.Fatalf("ReplaceConfig() error = %v, want not leader", err)
 	}
 }
 
-func TestStoreAppliesCommandOnLeader(t *testing.T) {
+func TestStoreReplaceConfigAppliesCommandOnLeader(t *testing.T) {
 	fsm := NewFSM()
 	store := NewStore(&fakeRaft{state: raft.Leader, apply: fsm.Apply}, fsm)
 
-	_, err := store.CreateUpstreamPool(context.Background(), "default", "pool-api", spec.UpstreamPool{
-		Upstreams: []string{"10.0.0.11:8080"},
-	})
+	view, err := store.ReplaceConfig(context.Background(), validStoreConfig())
 	if err != nil {
-		t.Fatalf("CreateUpstreamPool() error = %v", err)
+		t.Fatalf("ReplaceConfig() error = %v", err)
 	}
-	state := fsm.DesiredState()
-	if _, ok := state.Namespaces["default"].UpstreamPools["pool-api"]; !ok {
+	if got, want := view.Routes[0].ID, "r-api"; got != want {
+		t.Fatalf("view.Routes[0].ID = %q, want %q", got, want)
+	}
+	if _, ok := fsm.DesiredState().ProxyConfig.UpstreamPools["pool-api"]; !ok {
 		t.Fatal("pool-api missing from FSM state")
+	}
+}
+
+func TestStoreGetConfigReturnsCurrentConfig(t *testing.T) {
+	fsm := NewFSM()
+	store := NewStore(&fakeRaft{state: raft.Leader, apply: fsm.Apply}, fsm)
+	if _, err := store.ReplaceConfig(context.Background(), validStoreConfig()); err != nil {
+		t.Fatalf("ReplaceConfig() error = %v", err)
+	}
+
+	view, err := store.GetConfig(context.Background())
+	if err != nil {
+		t.Fatalf("GetConfig() error = %v", err)
+	}
+	if got, want := view.Routes[0].ID, "r-api"; got != want {
+		t.Fatalf("view.Routes[0].ID = %q, want %q", got, want)
+	}
+	if view.AppliedAt.IsZero() {
+		t.Fatal("view.AppliedAt is zero")
 	}
 }
 
@@ -104,65 +111,15 @@ func TestStoreSetClusterRaftTimingOnLeader(t *testing.T) {
 	}
 }
 
-func TestStoreListNamespacesReturnsRaftMetadataPath(t *testing.T) {
-	fsm := NewFSM()
-	store := NewStore(&fakeRaft{state: raft.Leader, apply: fsm.Apply}, fsm)
-	if _, err := store.CreateNamespace(context.Background(), "admin"); err != nil {
-		t.Fatalf("CreateNamespace() error = %v", err)
-	}
-
-	items, err := store.ListNamespaces(context.Background())
-	if err != nil {
-		t.Fatalf("ListNamespaces() error = %v", err)
-	}
-	paths := namespacePaths(items)
-	requireNamespacePath(t, paths, "admin", "raft://namespaces/admin")
-	requireNamespacePath(t, paths, "default", "raft://namespaces/default")
-}
-
-func namespacePaths(items []control.NamespaceSummary) map[string]string {
-	paths := map[string]string{}
-	for _, item := range items {
-		paths[item.Namespace] = item.Path
-	}
-	return paths
-}
-
-func requireNamespacePath(t *testing.T, paths map[string]string, namespace, want string) {
-	t.Helper()
-	if got := paths[namespace]; got != want {
-		t.Fatalf("%s path = %q, want %q", namespace, got, want)
-	}
-}
-
-func TestStoreReplaceNamespaceConfigAppliesCommandOnLeader(t *testing.T) {
-	fsm := NewFSM()
-	store := NewStore(&fakeRaft{state: raft.Leader, apply: fsm.Apply}, fsm)
-
-	view, err := store.ReplaceNamespaceConfig(context.Background(), "default", validStoreConfig())
-	if err != nil {
-		t.Fatalf("ReplaceNamespaceConfig() error = %v", err)
-	}
-	if !view.Exists {
-		t.Fatal("view.Exists = false, want true")
-	}
-	if got, want := view.Routes[0].ID, "r-api"; got != want {
-		t.Fatalf("view.Routes[0].ID = %q, want %q", got, want)
-	}
-	if _, ok := fsm.DesiredState().Namespaces["default"].UpstreamPools["pool-api"]; !ok {
-		t.Fatal("pool-api missing from FSM state")
-	}
-}
-
 func TestStoreMapsApplyLeadershipErrorToNotLeader(t *testing.T) {
 	store := NewStore(&fakeRaft{leader: "127.0.0.1:7001", state: raft.Leader, applyErr: raft.ErrNotLeader}, NewFSM())
 
-	_, err := store.CreateNamespace(context.Background(), "admin")
+	_, err := store.ReplaceConfig(context.Background(), validStoreConfig())
 	if err == nil {
-		t.Fatal("CreateNamespace() error = nil, want not leader")
+		t.Fatal("ReplaceConfig() error = nil, want not leader")
 	}
 	if !control.IsNotLeader(err) {
-		t.Fatalf("CreateNamespace() error = %v, want not leader", err)
+		t.Fatalf("ReplaceConfig() error = %v, want not leader", err)
 	}
 }
 
@@ -172,100 +129,41 @@ func TestStoreReturnsContextErrorBeforeApply(t *testing.T) {
 	node := &fakeRaft{state: raft.Leader}
 	store := NewStore(node, NewFSM())
 
-	_, err := store.CreateNamespace(ctx, "admin")
+	_, err := store.ReplaceConfig(ctx, validStoreConfig())
 	if !errors.Is(err, context.Canceled) {
-		t.Fatalf("CreateNamespace() error = %v, want context canceled", err)
+		t.Fatalf("ReplaceConfig() error = %v, want context canceled", err)
 	}
 	if node.applyCount != 0 {
 		t.Fatalf("Apply() calls = %d, want 0", node.applyCount)
 	}
-}
-
-func TestStoreRejectsInvalidNamespaceWithBadRequest(t *testing.T) {
-	fsm := NewFSM()
-	store := NewStore(&fakeRaft{state: raft.Leader, apply: fsm.Apply}, fsm)
-
-	_, err := store.CreateNamespace(context.Background(), "bad/name")
-	requireStateError(t, err, http.StatusBadRequest, "invalid_namespace")
-}
-
-func TestStoreRejectsInvalidNamespaceBeforeApply(t *testing.T) {
-	node := &fakeRaft{state: raft.Leader}
-	store := NewStore(node, NewFSM())
-
-	_, err := store.CreateNamespace(context.Background(), "bad:name")
-	requireStateError(t, err, http.StatusBadRequest, "invalid_namespace")
-	if node.applyCount != 0 {
-		t.Fatalf("Apply() calls = %d, want 0", node.applyCount)
-	}
-}
-
-func TestStoreRejectsInvalidNamespaceReads(t *testing.T) {
-	store := NewStore(&fakeRaft{state: raft.Leader}, NewFSM())
-
-	_, err := store.GetNamespaceConfig(context.Background(), "bad:name")
-	requireStateError(t, err, http.StatusBadRequest, "invalid_namespace")
 }
 
 func TestStoreMapsApplyRejectionsToStateErrorSemantics(t *testing.T) {
-	t.Run("duplicate namespace", func(t *testing.T) {
-		fsm := NewFSM()
-		store := NewStore(&fakeRaft{state: raft.Leader, apply: fsm.Apply}, fsm)
-
-		if _, err := store.CreateNamespace(context.Background(), "admin"); err != nil {
-			t.Fatalf("CreateNamespace() setup error = %v", err)
-		}
-
-		_, err := store.CreateNamespace(context.Background(), "admin")
-		requireStateError(t, err, http.StatusConflict, "resource_conflict")
-	})
-
-	t.Run("missing route delete", func(t *testing.T) {
-		fsm := NewFSM()
-		store := NewStore(&fakeRaft{state: raft.Leader, apply: fsm.Apply}, fsm)
-
-		if _, err := store.CreateNamespace(context.Background(), "admin"); err != nil {
-			t.Fatalf("CreateNamespace() setup error = %v", err)
-		}
-
-		err := store.DeleteRoute(context.Background(), "admin", "missing")
-		requireStateError(t, err, http.StatusNotFound, "resource_not_found")
-	})
-
-	t.Run("route id mismatch", func(t *testing.T) {
-		fsm := NewFSM()
-		store := NewStore(&fakeRaft{state: raft.Leader, apply: fsm.Apply}, fsm)
-
-		_, err := store.UpdateRoute(context.Background(), "admin", "r-api", spec.RouteConfig{ID: "other"})
-		requireStateError(t, err, http.StatusBadRequest, "invalid_request")
-	})
-
 	t.Run("validation failure", func(t *testing.T) {
 		fsm := NewFSM()
 		store := NewStore(&fakeRaft{state: raft.Leader, apply: fsm.Apply}, fsm)
 
-		_, err := store.CreateRoute(context.Background(), "admin", spec.RouteConfig{
-			ID:           "r-api",
-			Enabled:      true,
-			Match:        spec.RouteMatchConfig{Hosts: []string{"api.example.com"}},
-			UpstreamPool: "missing",
-		})
+		_, err := store.ReplaceConfig(context.Background(), invalidStoreConfig())
 		requireStateError(t, err, http.StatusUnprocessableEntity, "validation_failed")
+		var validationErrs spec.ValidationErrors
+		if !errors.As(err, &validationErrs) {
+			t.Fatalf("ReplaceConfig() error = %T %v, want spec.ValidationErrors", err, err)
+		}
+		if got, want := len(validationErrs), 1; got != want {
+			t.Fatalf("len(validationErrs) = %d, want %d", got, want)
+		}
 	})
 
-	t.Run("replace validation failure", func(t *testing.T) {
-		fsm := NewFSM()
-		store := NewStore(&fakeRaft{state: raft.Leader, apply: fsm.Apply}, fsm)
+	t.Run("explicit apply rejection", func(t *testing.T) {
+		store := NewStore(&fakeRaft{
+			state: raft.Leader,
+			apply: func(*raft.Log) interface{} {
+				return ApplyResponse{Error: "rejected", StatusCode: http.StatusBadRequest, Code: "invalid_request"}
+			},
+		}, NewFSM())
 
-		_, err := store.ReplaceNamespaceConfig(context.Background(), "admin", spec.Config{
-			Routes: []spec.RouteConfig{{
-				ID:           "r-api",
-				Enabled:      true,
-				Match:        spec.RouteMatchConfig{Hosts: []string{"api.example.com"}},
-				UpstreamPool: "missing",
-			}},
-		})
-		requireStateError(t, err, http.StatusUnprocessableEntity, "validation_failed")
+		_, err := store.ReplaceConfig(context.Background(), validStoreConfig())
+		requireStateError(t, err, http.StatusBadRequest, "invalid_request")
 	})
 }
 
@@ -325,5 +223,16 @@ func validStoreConfig() spec.Config {
 		UpstreamPools: map[string]spec.UpstreamPool{
 			"pool-api": {Upstreams: []string{"10.0.0.11:8080"}},
 		},
+	}
+}
+
+func invalidStoreConfig() spec.Config {
+	return spec.Config{
+		Routes: []spec.RouteConfig{{
+			ID:           "r-api",
+			Enabled:      true,
+			Match:        spec.RouteMatchConfig{Hosts: []string{"api.example.com"}},
+			UpstreamPool: "missing",
+		}},
 	}
 }

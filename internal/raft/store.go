@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"sort"
 	"time"
 
 	"github.com/hashicorp/raft"
@@ -29,105 +28,24 @@ func NewStore(node raftApplier, fsm *FSM) *Store {
 	return &Store{raft: node, fsm: fsm, timeout: 5 * time.Second}
 }
 
-func (s *Store) DesiredState(_ context.Context) (control.DesiredState, error) {
-	return s.fsm.DesiredState(), nil
-}
-
-func (s *Store) ListNamespaces(_ context.Context) ([]control.NamespaceSummary, error) {
+func (s *Store) GetConfig(_ context.Context) (control.AppliedProxyConfig, error) {
 	state := s.fsm.DesiredState()
-	return namespaceSummaries(state), nil
-}
-
-func namespaceSummaries(state control.DesiredState) []control.NamespaceSummary {
-	namespaces := stateNamespaces(state)
-	items := make([]control.NamespaceSummary, 0, len(namespaces))
-	for _, namespace := range namespaces {
-		cfg, exists := state.Namespaces[namespace]
-		items = append(items, namespaceSummary(namespace, cfg, exists))
-	}
-	return items
-}
-
-func stateNamespaces(state control.DesiredState) []string {
-	namespaces := make([]string, 0, len(state.Namespaces)+1)
-	hasDefault := false
-	for namespace := range state.Namespaces {
-		if namespace == control.DefaultNamespace {
-			hasDefault = true
-		}
-		namespaces = append(namespaces, namespace)
-	}
-	if !hasDefault {
-		namespaces = append(namespaces, control.DefaultNamespace)
-	}
-	sort.Strings(namespaces)
-	return namespaces
-}
-
-func namespaceSummary(namespace string, cfg spec.Config, exists bool) control.NamespaceSummary {
-	cfg = cloneConfig(cfg)
-	return control.NamespaceSummary{
-		Namespace:         namespace,
-		Path:              control.DesiredStatePath(namespace),
-		Exists:            exists,
-		RouteCount:        len(cfg.Routes),
-		UpstreamPoolCount: len(cfg.UpstreamPools),
-	}
-}
-
-func (s *Store) GetNamespaceConfig(_ context.Context, namespace string) (control.NamespaceConfig, error) {
-	if err := control.ValidateNamespaceName(namespace); err != nil {
-		return control.NamespaceConfig{}, err
-	}
-	state := s.fsm.DesiredState()
-	cfg, exists := state.Namespaces[namespace]
-	cfg = cloneConfig(cfg)
-	return control.NamespaceConfig{
-		Namespace:     namespace,
-		Exists:        exists,
+	cfg := cloneConfig(state.ProxyConfig)
+	return control.AppliedProxyConfig{
 		Routes:        cfg.Routes,
 		UpstreamPools: cfg.UpstreamPools,
 		AppliedAt:     state.AppliedAt,
 	}, nil
 }
 
-func (s *Store) ReplaceNamespaceConfig(ctx context.Context, namespace string, cfg spec.Config) (control.NamespaceConfig, error) {
+func (s *Store) ReplaceConfig(ctx context.Context, cfg spec.Config) (control.AppliedProxyConfig, error) {
 	if err := s.ensureLeaderWrite(ctx); err != nil {
-		return control.NamespaceConfig{}, err
+		return control.AppliedProxyConfig{}, err
 	}
-	if err := control.ValidateNamespaceName(namespace); err != nil {
-		return control.NamespaceConfig{}, err
+	if err := s.apply(ctx, Command{Type: CommandReplaceConfig, Config: cfg}); err != nil {
+		return control.AppliedProxyConfig{}, err
 	}
-	if err := s.apply(ctx, Command{Type: CommandReplaceNamespaceConfig, Namespace: namespace, Config: cfg}); err != nil {
-		return control.NamespaceConfig{}, err
-	}
-	return s.GetNamespaceConfig(ctx, namespace)
-}
-
-func (s *Store) CreateNamespace(ctx context.Context, namespace string) (control.NamespaceSummary, error) {
-	if err := s.ensureLeaderWrite(ctx); err != nil {
-		return control.NamespaceSummary{}, err
-	}
-	if err := control.ValidateNamespaceName(namespace); err != nil {
-		return control.NamespaceSummary{}, err
-	}
-	if err := s.apply(ctx, Command{Type: CommandCreateNamespace, Namespace: namespace}); err != nil {
-		return control.NamespaceSummary{}, err
-	}
-	return control.NamespaceSummary{
-		Namespace: namespace,
-		Exists:    true,
-	}, nil
-}
-
-func (s *Store) DeleteNamespace(ctx context.Context, namespace string) error {
-	if err := s.ensureLeaderWrite(ctx); err != nil {
-		return err
-	}
-	if err := control.ValidateNamespaceName(namespace); err != nil {
-		return err
-	}
-	return s.apply(ctx, Command{Type: CommandDeleteNamespace, Namespace: namespace})
+	return s.GetConfig(ctx)
 }
 
 func (s *Store) SetClusterVIP(ctx context.Context, vip control.ClusterVIPConfig) error {
@@ -149,78 +67,6 @@ func (s *Store) SetClusterRaftTiming(ctx context.Context, timing control.Cluster
 		return err
 	}
 	return s.apply(ctx, Command{Type: CommandSetClusterRaftTiming, RaftTiming: &timing})
-}
-
-func (s *Store) CreateRoute(ctx context.Context, namespace string, route spec.RouteConfig) (spec.RouteConfig, error) {
-	if err := s.ensureLeaderWrite(ctx); err != nil {
-		return spec.RouteConfig{}, err
-	}
-	if err := control.ValidateNamespaceName(namespace); err != nil {
-		return spec.RouteConfig{}, err
-	}
-	if err := s.apply(ctx, Command{Type: CommandCreateRoute, Namespace: namespace, Route: route}); err != nil {
-		return spec.RouteConfig{}, err
-	}
-	return cloneRoute(route), nil
-}
-
-func (s *Store) UpdateRoute(ctx context.Context, namespace, id string, route spec.RouteConfig) (spec.RouteConfig, error) {
-	if err := s.ensureLeaderWrite(ctx); err != nil {
-		return spec.RouteConfig{}, err
-	}
-	if err := control.ValidateNamespaceName(namespace); err != nil {
-		return spec.RouteConfig{}, err
-	}
-	if err := s.apply(ctx, Command{Type: CommandUpdateRoute, Namespace: namespace, RouteID: id, Route: route}); err != nil {
-		return spec.RouteConfig{}, err
-	}
-	return cloneRoute(route), nil
-}
-
-func (s *Store) DeleteRoute(ctx context.Context, namespace, id string) error {
-	if err := s.ensureLeaderWrite(ctx); err != nil {
-		return err
-	}
-	if err := control.ValidateNamespaceName(namespace); err != nil {
-		return err
-	}
-	return s.apply(ctx, Command{Type: CommandDeleteRoute, Namespace: namespace, RouteID: id})
-}
-
-func (s *Store) CreateUpstreamPool(ctx context.Context, namespace, id string, pool spec.UpstreamPool) (spec.UpstreamPool, error) {
-	if err := s.ensureLeaderWrite(ctx); err != nil {
-		return spec.UpstreamPool{}, err
-	}
-	if err := control.ValidateNamespaceName(namespace); err != nil {
-		return spec.UpstreamPool{}, err
-	}
-	if err := s.apply(ctx, Command{Type: CommandCreateUpstreamPool, Namespace: namespace, PoolID: id, Pool: pool}); err != nil {
-		return spec.UpstreamPool{}, err
-	}
-	return cloneUpstreamPool(pool), nil
-}
-
-func (s *Store) UpdateUpstreamPool(ctx context.Context, namespace, id string, pool spec.UpstreamPool) (spec.UpstreamPool, error) {
-	if err := s.ensureLeaderWrite(ctx); err != nil {
-		return spec.UpstreamPool{}, err
-	}
-	if err := control.ValidateNamespaceName(namespace); err != nil {
-		return spec.UpstreamPool{}, err
-	}
-	if err := s.apply(ctx, Command{Type: CommandUpdateUpstreamPool, Namespace: namespace, PoolID: id, Pool: pool}); err != nil {
-		return spec.UpstreamPool{}, err
-	}
-	return cloneUpstreamPool(pool), nil
-}
-
-func (s *Store) DeleteUpstreamPool(ctx context.Context, namespace, id string) error {
-	if err := s.ensureLeaderWrite(ctx); err != nil {
-		return err
-	}
-	if err := control.ValidateNamespaceName(namespace); err != nil {
-		return err
-	}
-	return s.apply(ctx, Command{Type: CommandDeleteUpstreamPool, Namespace: namespace, PoolID: id})
 }
 
 func (s *Store) ensureLeaderWrite(ctx context.Context) error {
@@ -261,11 +107,15 @@ func (s *Store) apply(ctx context.Context, cmd Command) error {
 		if code == "" {
 			code = "raft_apply_rejected"
 		}
-		return &control.StateError{
+		stateErr := &control.StateError{
 			StatusCode: statusCode,
 			Code:       code,
 			Message:    resp.Error,
 		}
+		if len(resp.ValidationErrors) > 0 {
+			stateErr.Err = spec.ValidationErrors(resp.ValidationErrors)
+		}
+		return stateErr
 	}
 	return nil
 }

@@ -30,8 +30,11 @@ func NewFSM() *FSM {
 func NewFSMWithConfig(appCfg boot.AppConfig, onApply func(control.DesiredState)) *FSM {
 	return &FSM{
 		state: control.DesiredState{
-			Namespaces: map[string]spec.Config{},
-			AppliedAt:  time.Now(),
+			ProxyConfig: spec.Config{
+				Routes:        []spec.RouteConfig{},
+				UpstreamPools: map[string]spec.UpstreamPool{},
+			},
+			AppliedAt: time.Now(),
 		},
 		appCfg:  appCfg,
 		onApply: onApply,
@@ -105,59 +108,12 @@ func (f *FSM) Restore(reader io.ReadCloser) error {
 }
 
 func (f *FSM) applyCommand(state *control.DesiredState, cmd Command) error {
-	if cmd.Namespace != "" {
-		if err := control.ValidateNamespaceName(cmd.Namespace); err != nil {
-			return err
-		}
-	}
-
 	switch cmd.Type {
-	case CommandCreateNamespace:
-		if _, exists := state.Namespaces[cmd.Namespace]; exists {
-			return conflictError(fmt.Sprintf("namespace %q already exists", cmd.Namespace))
+	case CommandReplaceConfig:
+		if errs := cmd.Config.Validate(); len(errs) > 0 {
+			return validationError(spec.ValidationErrors(errs))
 		}
-		state.Namespaces[cmd.Namespace] = ensureNamespace(state.Namespaces, cmd.Namespace)
-	case CommandDeleteNamespace:
-		if _, exists := state.Namespaces[cmd.Namespace]; !exists {
-			return notFoundError(fmt.Sprintf("namespace %q was not found", cmd.Namespace))
-		}
-		delete(state.Namespaces, cmd.Namespace)
-	case CommandReplaceNamespaceConfig:
-		state.Namespaces[cmd.Namespace] = cloneConfig(cmd.Config)
-	case CommandCreateUpstreamPool:
-		cfg := ensureNamespace(state.Namespaces, cmd.Namespace)
-		if _, exists := cfg.UpstreamPools[cmd.PoolID]; exists {
-			return conflictError(fmt.Sprintf("upstream pool %q already exists", cmd.PoolID))
-		}
-		cfg.UpstreamPools[cmd.PoolID] = cloneUpstreamPool(cmd.Pool)
-		state.Namespaces[cmd.Namespace] = cfg
-	case CommandUpdateUpstreamPool:
-		cfg, exists := state.Namespaces[cmd.Namespace]
-		if !exists {
-			return notFoundError(fmt.Sprintf("namespace %q was not found", cmd.Namespace))
-		}
-		cfg = cloneConfig(cfg)
-		if _, exists := cfg.UpstreamPools[cmd.PoolID]; !exists {
-			return notFoundError(fmt.Sprintf("upstream pool %q was not found", cmd.PoolID))
-		}
-		cfg.UpstreamPools[cmd.PoolID] = cloneUpstreamPool(cmd.Pool)
-		state.Namespaces[cmd.Namespace] = cfg
-	case CommandDeleteUpstreamPool:
-		cfg, exists := state.Namespaces[cmd.Namespace]
-		if !exists {
-			return notFoundError(fmt.Sprintf("namespace %q was not found", cmd.Namespace))
-		}
-		cfg = cloneConfig(cfg)
-		if _, exists := cfg.UpstreamPools[cmd.PoolID]; !exists {
-			return notFoundError(fmt.Sprintf("upstream pool %q was not found", cmd.PoolID))
-		}
-		for _, route := range cfg.Routes {
-			if route.UpstreamPool == cmd.PoolID {
-				return conflictError(fmt.Sprintf("upstream pool %q is still referenced by route %q", cmd.PoolID, route.ID))
-			}
-		}
-		delete(cfg.UpstreamPools, cmd.PoolID)
-		state.Namespaces[cmd.Namespace] = cfg
+		state.ProxyConfig = cloneConfig(cmd.Config)
 	case CommandSetClusterVIP:
 		if cmd.VIP == nil {
 			return invalidRequestError("vip is required")
@@ -178,46 +134,6 @@ func (f *FSM) applyCommand(state *control.DesiredState, cmd Command) error {
 		}
 		timing := *cmd.RaftTiming
 		state.RaftTiming = &timing
-	case CommandCreateRoute:
-		cfg := ensureNamespace(state.Namespaces, cmd.Namespace)
-		for _, route := range cfg.Routes {
-			if route.ID == cmd.Route.ID {
-				return conflictError(fmt.Sprintf("route %q already exists", cmd.Route.ID))
-			}
-		}
-		cfg.Routes = append(cfg.Routes, cloneRoute(cmd.Route))
-		state.Namespaces[cmd.Namespace] = cfg
-	case CommandUpdateRoute:
-		if cmd.Route.ID != cmd.RouteID {
-			return invalidRequestError("route id in body must match request path")
-		}
-		cfg, exists := state.Namespaces[cmd.Namespace]
-		if !exists {
-			return notFoundError(fmt.Sprintf("namespace %q was not found", cmd.Namespace))
-		}
-		cfg = cloneConfig(cfg)
-		for index, route := range cfg.Routes {
-			if route.ID == cmd.RouteID {
-				cfg.Routes[index] = cloneRoute(cmd.Route)
-				state.Namespaces[cmd.Namespace] = cfg
-				return nil
-			}
-		}
-		return notFoundError(fmt.Sprintf("route %q was not found", cmd.RouteID))
-	case CommandDeleteRoute:
-		cfg, exists := state.Namespaces[cmd.Namespace]
-		if !exists {
-			return notFoundError(fmt.Sprintf("namespace %q was not found", cmd.Namespace))
-		}
-		cfg = cloneConfig(cfg)
-		for index, route := range cfg.Routes {
-			if route.ID == cmd.RouteID {
-				cfg.Routes = append(cfg.Routes[:index], cfg.Routes[index+1:]...)
-				state.Namespaces[cmd.Namespace] = cfg
-				return nil
-			}
-		}
-		return notFoundError(fmt.Sprintf("route %q was not found", cmd.RouteID))
 	default:
 		return invalidRequestError(fmt.Sprintf("unknown command type %q", cmd.Type))
 	}
@@ -228,11 +144,16 @@ func (f *FSM) applyCommand(state *control.DesiredState, cmd Command) error {
 func applyError(err error) ApplyResponse {
 	var stateErr *control.StateError
 	if errors.As(err, &stateErr) {
-		return ApplyResponse{
+		resp := ApplyResponse{
 			Error:      stateErr.Message,
 			StatusCode: stateErr.StatusCode,
 			Code:       stateErr.Code,
 		}
+		var validationErrs spec.ValidationErrors
+		if errors.As(stateErr.Err, &validationErrs) {
+			resp.ValidationErrors = []spec.ValidationError(validationErrs)
+		}
+		return resp
 	}
 	return ApplyResponse{
 		Error:      err.Error(),
@@ -249,22 +170,6 @@ func invalidRequestError(message string) *control.StateError {
 	}
 }
 
-func conflictError(message string) *control.StateError {
-	return &control.StateError{
-		StatusCode: http.StatusConflict,
-		Code:       "resource_conflict",
-		Message:    message,
-	}
-}
-
-func notFoundError(message string) *control.StateError {
-	return &control.StateError{
-		StatusCode: http.StatusNotFound,
-		Code:       "resource_not_found",
-		Message:    message,
-	}
-}
-
 func validationError(err error) *control.StateError {
 	return &control.StateError{
 		StatusCode: http.StatusUnprocessableEntity,
@@ -274,29 +179,6 @@ func validationError(err error) *control.StateError {
 	}
 }
 
-func ensureNamespace(namespaces map[string]spec.Config, namespace string) spec.Config {
-	cfg, exists := namespaces[namespace]
-	if !exists {
-		cfg = spec.Config{}
-	}
-	cfg = cloneConfig(cfg)
-	if cfg.Routes == nil {
-		cfg.Routes = []spec.RouteConfig{}
-	}
-	if cfg.UpstreamPools == nil {
-		cfg.UpstreamPools = map[string]spec.UpstreamPool{}
-	}
-	namespaces[namespace] = cfg
-	return cfg
-}
-
 func validateDesiredState(state control.DesiredState) []spec.ValidationError {
-	var errs []spec.ValidationError
-	for namespace, cfg := range state.Namespaces {
-		for _, err := range cfg.Validate() {
-			err.Field = "namespaces." + namespace + "." + err.Field
-			errs = append(errs, err)
-		}
-	}
-	return errs
+	return state.ProxyConfig.Validate()
 }

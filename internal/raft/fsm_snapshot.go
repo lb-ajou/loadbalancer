@@ -33,18 +33,13 @@ func decodeSnapshot(reader io.Reader) (control.DesiredState, error) {
 	if err := json.NewDecoder(reader).Decode(&state); err != nil {
 		return control.DesiredState{}, err
 	}
-	if state.Namespaces == nil {
-		state.Namespaces = map[string]spec.Config{}
-	}
+	state.ProxyConfig = cloneConfig(state.ProxyConfig)
 	return cloneDesiredState(state), nil
 }
 
 func cloneDesiredState(state control.DesiredState) control.DesiredState {
 	cloned := state
-	cloned.Namespaces = make(map[string]spec.Config, len(state.Namespaces))
-	for namespace, cfg := range state.Namespaces {
-		cloned.Namespaces[namespace] = cloneConfig(cfg)
-	}
+	cloned.ProxyConfig = cloneConfig(state.ProxyConfig)
 	if state.VIP != nil {
 		vip := control.NormalizeClusterVIP(*state.VIP)
 		cloned.VIP = &vip

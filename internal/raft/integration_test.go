@@ -8,25 +8,29 @@ import (
 
 	"github.com/hashicorp/raft"
 
+	"reverseproxy-poc/internal/spec"
 	control "reverseproxy-poc/internal/state"
 )
 
-func TestIntegrationThreeNodeClusterReplicatesNamespace(t *testing.T) {
+func TestIntegrationThreeNodeClusterReplicatesConfig(t *testing.T) {
 	cluster := newInmemCluster(t, 3)
 	defer cluster.Close()
 
 	leader := cluster.LeaderStore(t)
-	if _, err := leader.CreateNamespace(context.Background(), "admin"); err != nil {
-		t.Fatalf("CreateNamespace() error = %v", err)
+	if _, err := leader.ReplaceConfig(context.Background(), validIntegrationConfig()); err != nil {
+		t.Fatalf("ReplaceConfig() error = %v", err)
 	}
 
 	eventually(t, 3*time.Second, func() bool {
 		for _, store := range cluster.stores {
-			state, err := store.DesiredState(context.Background())
+			cfg, err := store.GetConfig(context.Background())
 			if err != nil {
 				return false
 			}
-			if _, ok := state.Namespaces["admin"]; !ok {
+			if len(cfg.Routes) != 1 || cfg.Routes[0].ID != "r-api" {
+				return false
+			}
+			if _, ok := cfg.UpstreamPools["pool-api"]; !ok {
 				return false
 			}
 		}
@@ -39,12 +43,26 @@ func TestIntegrationFollowerRejectsWriteWithLeader(t *testing.T) {
 	defer cluster.Close()
 
 	follower := cluster.FollowerStore(t)
-	_, err := follower.CreateNamespace(context.Background(), "admin")
+	_, err := follower.ReplaceConfig(context.Background(), validIntegrationConfig())
 	if err == nil {
-		t.Fatal("CreateNamespace() error = nil, want not leader")
+		t.Fatal("ReplaceConfig() error = nil, want not leader")
 	}
 	if !control.IsNotLeader(err) {
-		t.Fatalf("CreateNamespace() error = %v, want not leader", err)
+		t.Fatalf("ReplaceConfig() error = %v, want not leader", err)
+	}
+}
+
+func validIntegrationConfig() spec.Config {
+	return spec.Config{
+		Routes: []spec.RouteConfig{{
+			ID:           "r-api",
+			Enabled:      true,
+			Match:        spec.RouteMatchConfig{Hosts: []string{"api.example.com"}},
+			UpstreamPool: "pool-api",
+		}},
+		UpstreamPools: map[string]spec.UpstreamPool{
+			"pool-api": {Upstreams: []string{"10.0.0.11:8080"}},
+		},
 	}
 }
 

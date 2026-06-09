@@ -13,110 +13,28 @@ import (
 	control "reverseproxy-poc/internal/state"
 )
 
-func TestFSMApplyCreatePoolAndRoute(t *testing.T) {
+func TestFSMApplyReplaceConfig(t *testing.T) {
 	fsm := NewFSM()
-	applyCommand(t, fsm, Command{
-		Type:      CommandCreateUpstreamPool,
-		Namespace: control.DefaultNamespace,
-		PoolID:    "pool-api",
-		Pool:      spec.UpstreamPool{Upstreams: []string{"10.0.0.11:8080"}},
-	})
-	applyCommand(t, fsm, Command{
-		Type:      CommandCreateRoute,
-		Namespace: control.DefaultNamespace,
-		Route: spec.RouteConfig{
-			ID:           "r-api",
-			Enabled:      true,
-			Match:        spec.RouteMatchConfig{Hosts: []string{"api.example.com"}},
-			UpstreamPool: "pool-api",
-		},
-	})
+	resp := applyCommand(t, fsm, Command{Type: CommandReplaceConfig, Config: validFSMConfig("r-api", "pool-api")})
+	if resp.Error != "" {
+		t.Fatalf("ReplaceConfig response error = %q", resp.Error)
+	}
 
 	state := fsm.DesiredState()
-	cfg := state.Namespaces[control.DefaultNamespace]
-	if got, want := len(cfg.Routes), 1; got != want {
-		t.Fatalf("len(cfg.Routes) = %d, want %d", got, want)
+	if got, want := len(state.ProxyConfig.Routes), 1; got != want {
+		t.Fatalf("len(state.ProxyConfig.Routes) = %d, want %d", got, want)
 	}
-	if _, ok := cfg.UpstreamPools["pool-api"]; !ok {
-		t.Fatal("cfg.UpstreamPools[pool-api] missing")
+	if _, ok := state.ProxyConfig.UpstreamPools["pool-api"]; !ok {
+		t.Fatal("state.ProxyConfig.UpstreamPools[pool-api] missing")
 	}
 }
 
 func TestFSMApplyInvalidCommandLeavesStateUnchanged(t *testing.T) {
 	fsm := NewFSM()
-	resp := applyCommand(t, fsm, Command{
-		Type:      CommandCreateRoute,
-		Namespace: control.DefaultNamespace,
-		Route: spec.RouteConfig{
-			ID:           "r-api",
-			Enabled:      true,
-			Match:        spec.RouteMatchConfig{Hosts: []string{"api.example.com"}},
-			UpstreamPool: "missing",
-		},
-	})
-	if resp.Error == "" {
-		t.Fatal("response error is empty, want validation error")
-	}
-	if got := len(fsm.DesiredState().Namespaces); got != 0 {
-		t.Fatalf("len(fsm.DesiredState().Namespaces) = %d, want 0", got)
-	}
-}
-
-func TestFSMApplyRejectsInvalidNamespace(t *testing.T) {
-	fsm := NewFSM()
-	resp := applyCommand(t, fsm, Command{
-		Type:      CommandCreateNamespace,
-		Namespace: "bad/name",
-	})
-
-	requireApplyRejection(t, resp, http.StatusBadRequest, "invalid_namespace")
-	if got := len(fsm.DesiredState().Namespaces); got != 0 {
-		t.Fatalf("len(fsm.DesiredState().Namespaces) = %d, want 0", got)
-	}
-}
-
-func TestFSMReplaceNamespaceConfigReplacesOnlyTargetNamespace(t *testing.T) {
-	fsm := NewFSM()
-	applyCommand(t, fsm, Command{
-		Type:      CommandReplaceNamespaceConfig,
-		Namespace: "default",
-		Config:    validFSMConfig("r-api", "pool-api"),
-	})
-	applyCommand(t, fsm, Command{
-		Type:      CommandReplaceNamespaceConfig,
-		Namespace: "admin",
-		Config:    validFSMConfig("r-admin", "pool-admin"),
-	})
+	applyCommand(t, fsm, Command{Type: CommandReplaceConfig, Config: validFSMConfig("r-api", "pool-api")})
 
 	resp := applyCommand(t, fsm, Command{
-		Type:      CommandReplaceNamespaceConfig,
-		Namespace: "default",
-		Config:    validFSMConfig("r-new", "pool-new"),
-	})
-	if resp.Error != "" {
-		t.Fatalf("ReplaceNamespaceConfig response error = %q", resp.Error)
-	}
-
-	state := fsm.DesiredState()
-	if got, want := state.Namespaces["default"].Routes[0].ID, "r-new"; got != want {
-		t.Fatalf("default route ID = %q, want %q", got, want)
-	}
-	if got, want := state.Namespaces["admin"].Routes[0].ID, "r-admin"; got != want {
-		t.Fatalf("admin route ID = %q, want %q", got, want)
-	}
-}
-
-func TestFSMReplaceNamespaceConfigRejectsInvalidWithoutChangingState(t *testing.T) {
-	fsm := NewFSM()
-	applyCommand(t, fsm, Command{
-		Type:      CommandReplaceNamespaceConfig,
-		Namespace: "default",
-		Config:    validFSMConfig("r-api", "pool-api"),
-	})
-
-	resp := applyCommand(t, fsm, Command{
-		Type:      CommandReplaceNamespaceConfig,
-		Namespace: "default",
+		Type: CommandReplaceConfig,
 		Config: spec.Config{
 			Routes: []spec.RouteConfig{{
 				ID:           "r-bad",
@@ -126,11 +44,47 @@ func TestFSMReplaceNamespaceConfigRejectsInvalidWithoutChangingState(t *testing.
 			}},
 		},
 	})
+	if resp.Error == "" {
+		t.Fatal("response error is empty, want validation error")
+	}
+	if got, want := len(resp.ValidationErrors), 1; got != want {
+		t.Fatalf("len(resp.ValidationErrors) = %d, want %d", got, want)
+	}
+	if got, want := fsm.DesiredState().ProxyConfig.Routes[0].ID, "r-api"; got != want {
+		t.Fatalf("route ID = %q, want %q", got, want)
+	}
+}
 
-	requireApplyRejection(t, resp, http.StatusUnprocessableEntity, "validation_failed")
+func TestFSMReplaceConfigReplacesWholeConfig(t *testing.T) {
+	fsm := NewFSM()
+	applyCommand(t, fsm, Command{Type: CommandReplaceConfig, Config: validFSMConfig("r-api", "pool-api")})
+
+	resp := applyCommand(t, fsm, Command{
+		Type:   CommandReplaceConfig,
+		Config: validFSMConfig("r-new", "pool-new"),
+	})
+	if resp.Error != "" {
+		t.Fatalf("ReplaceConfig response error = %q", resp.Error)
+	}
+
 	state := fsm.DesiredState()
-	if got, want := state.Namespaces["default"].Routes[0].ID, "r-api"; got != want {
-		t.Fatalf("default route ID = %q, want %q", got, want)
+	if got, want := state.ProxyConfig.Routes[0].ID, "r-new"; got != want {
+		t.Fatalf("route ID = %q, want %q", got, want)
+	}
+	if _, ok := state.ProxyConfig.UpstreamPools["pool-api"]; ok {
+		t.Fatal("old upstream pool is still present after whole config replace")
+	}
+}
+
+func TestFSMInitialStateHasEmptyProxyConfig(t *testing.T) {
+	fsm := NewFSM()
+
+	state := fsm.DesiredState()
+	if state.ProxyConfig.Routes == nil {
+		t.Fatal("state.ProxyConfig.Routes = nil, want empty slice")
+	}
+	if state.ProxyConfig.UpstreamPools == nil {
+		t.Fatal("state.ProxyConfig.UpstreamPools = nil, want empty map")
 	}
 }
 
@@ -207,10 +161,7 @@ func TestFSMSetClusterRaftTimingRejectsInvalidConfig(t *testing.T) {
 
 func TestFSMSnapshotRestoreRoundTrip(t *testing.T) {
 	fsm := NewFSM()
-	applyCommand(t, fsm, Command{
-		Type:      CommandCreateNamespace,
-		Namespace: "admin",
-	})
+	applyCommand(t, fsm, Command{Type: CommandReplaceConfig, Config: validFSMConfig("r-api", "pool-api")})
 	vip := validClusterVIP()
 	applyCommand(t, fsm, Command{Type: CommandSetClusterVIP, VIP: &vip})
 	timing := validClusterRaftTiming()
@@ -228,8 +179,11 @@ func TestFSMSnapshotRestoreRoundTrip(t *testing.T) {
 	if err := restored.Restore(io.NopCloser(bytes.NewReader(buf.Bytes()))); err != nil {
 		t.Fatalf("Restore() error = %v", err)
 	}
-	if _, ok := restored.DesiredState().Namespaces["admin"]; !ok {
-		t.Fatal("restored namespace admin missing")
+	if got, want := restored.DesiredState().ProxyConfig.Routes[0].ID, "r-api"; got != want {
+		t.Fatalf("restored route ID = %q, want %q", got, want)
+	}
+	if _, ok := restored.DesiredState().ProxyConfig.UpstreamPools["pool-api"]; !ok {
+		t.Fatal("restored upstream pool pool-api missing")
 	}
 	if got, want := restored.DesiredState().VIP.Address, "10.10.0.100/24"; got != want {
 		t.Fatalf("restored VIP.Address = %q, want %q", got, want)
@@ -240,11 +194,17 @@ func TestFSMSnapshotRestoreRoundTrip(t *testing.T) {
 }
 
 func TestFSMSnapshotRestoreNormalizesVIPDefaults(t *testing.T) {
-	body := `{"namespaces":{},"vip":{"address":"10.10.0.100/24"}}`
+	body := `{"ProxyConfig":{},"VIP":{"address":"10.10.0.100/24"}}`
 	restored := NewFSM()
 
 	if err := restored.Restore(io.NopCloser(strings.NewReader(body))); err != nil {
 		t.Fatalf("Restore() error = %v", err)
+	}
+	if restored.DesiredState().ProxyConfig.Routes == nil {
+		t.Fatal("Routes = nil, want empty slice")
+	}
+	if restored.DesiredState().ProxyConfig.UpstreamPools == nil {
+		t.Fatal("UpstreamPools = nil, want empty map")
 	}
 	if got, want := restored.DesiredState().VIP.GARPCount, control.DefaultVIPGARPCount; got != want {
 		t.Fatalf("VIP.GARPCount = %d, want %d", got, want)
