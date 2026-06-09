@@ -340,90 +340,18 @@ func (p *raftStoreProxy) current() (*raftstore.Store, error) {
 	return p.store, nil
 }
 
-func (p *raftStoreProxy) ListNamespaces(ctx context.Context) ([]state.NamespaceSummary, error) {
+func (p *raftStoreProxy) GetConfig(ctx context.Context) (state.AppliedProxyConfig, error) {
 	store, err := p.current()
 	if err != nil {
-		return nil, err
+		return state.AppliedProxyConfig{}, err
 	}
-	return store.ListNamespaces(ctx)
+	return store.GetConfig(ctx)
 }
 
-func (p *raftStoreProxy) GetNamespaceConfig(ctx context.Context, namespace string) (state.NamespaceConfig, error) {
+func (p *raftStoreProxy) ReplaceConfig(ctx context.Context, cfg spec.Config) (state.AppliedProxyConfig, error) {
 	store, err := p.current()
 	if err != nil {
-		return state.NamespaceConfig{}, err
+		return state.AppliedProxyConfig{}, err
 	}
-	return store.GetNamespaceConfig(ctx, namespace)
-}
-
-func (p *raftStoreProxy) ReplaceNamespaceConfig(ctx context.Context, namespace string, cfg spec.Config) (state.NamespaceConfig, error) {
-	store, err := p.current()
-	if err != nil {
-		return state.NamespaceConfig{}, err
-	}
-	return store.ReplaceNamespaceConfig(ctx, namespace, cfg)
-}
-
-func (p *raftStoreProxy) CreateNamespace(ctx context.Context, namespace string) (state.NamespaceSummary, error) {
-	store, err := p.current()
-	if err != nil {
-		return state.NamespaceSummary{}, err
-	}
-	return store.CreateNamespace(ctx, namespace)
-}
-
-func (p *raftStoreProxy) DeleteNamespace(ctx context.Context, namespace string) error {
-	store, err := p.current()
-	if err != nil {
-		return err
-	}
-	return store.DeleteNamespace(ctx, namespace)
-}
-
-func (p *raftStoreProxy) CreateRoute(ctx context.Context, namespace string, route spec.RouteConfig) (spec.RouteConfig, error) {
-	store, err := p.current()
-	if err != nil {
-		return spec.RouteConfig{}, err
-	}
-	return store.CreateRoute(ctx, namespace, route)
-}
-
-func (p *raftStoreProxy) UpdateRoute(ctx context.Context, namespace, id string, route spec.RouteConfig) (spec.RouteConfig, error) {
-	store, err := p.current()
-	if err != nil {
-		return spec.RouteConfig{}, err
-	}
-	return store.UpdateRoute(ctx, namespace, id, route)
-}
-
-func (p *raftStoreProxy) DeleteRoute(ctx context.Context, namespace, id string) error {
-	store, err := p.current()
-	if err != nil {
-		return err
-	}
-	return store.DeleteRoute(ctx, namespace, id)
-}
-
-func (p *raftStoreProxy) CreateUpstreamPool(ctx context.Context, namespace, id string, pool spec.UpstreamPool) (spec.UpstreamPool, error) {
-	store, err := p.current()
-	if err != nil {
-		return spec.UpstreamPool{}, err
-	}
-	return store.CreateUpstreamPool(ctx, namespace, id, pool)
-}
-
-func (p *raftStoreProxy) UpdateUpstreamPool(ctx context.Context, namespace, id string, pool spec.UpstreamPool) (spec.UpstreamPool, error) {
-	store, err := p.current()
-	if err != nil {
-		return spec.UpstreamPool{}, err
-	}
-	return store.UpdateUpstreamPool(ctx, namespace, id, pool)
-}
-
-func (p *raftStoreProxy) DeleteUpstreamPool(ctx context.Context, namespace, id string) error {
-	store, err := p.current()
-	if err != nil {
-		return err
-	}
-	return store.DeleteUpstreamPool(ctx, namespace, id)
+	return store.ReplaceConfig(ctx, cfg)
 }

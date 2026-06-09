@@ -19,19 +19,8 @@ import (
 )
 
 type stubService struct {
-	listNamespacesFn         func() ([]admin.NamespaceView, error)
-	createNamespaceFn        func(namespace string) (admin.NamespaceView, error)
-	deleteNamespaceFn        func(namespace string) error
-	getNamespaceConfigFn     func(namespace string) (admin.NamespaceConfigView, error)
-	replaceNamespaceConfigFn func(namespace string, cfg spec.Config) (admin.NamespaceConfigView, error)
-	getNamespaceRoutesFn     func(namespace string) ([]spec.RouteConfig, error)
-	createRouteFn            func(namespace string, route spec.RouteConfig) (spec.RouteConfig, error)
-	updateRouteFn            func(namespace, id string, route spec.RouteConfig) (spec.RouteConfig, error)
-	deleteRouteFn            func(namespace, id string) error
-	getNamespaceUpstreamsFn  func(namespace string) (map[string]spec.UpstreamPool, error)
-	createUpstreamPoolFn     func(namespace, id string, pool spec.UpstreamPool) (spec.UpstreamPool, error)
-	updateUpstreamPoolFn     func(namespace, id string, pool spec.UpstreamPool) (spec.UpstreamPool, error)
-	deleteUpstreamPoolFn     func(namespace, id string) error
+	getConfigFn     func() (admin.ConfigView, error)
+	replaceConfigFn func(cfg spec.Config) (admin.ConfigView, error)
 }
 
 type stubJoiner struct {
@@ -85,95 +74,18 @@ func (s stubLifecycle) ClusterLifecycleStatus(context.Context) NodeClusterStatus
 	return s.status
 }
 
-func (s stubService) ListNamespaces(_ context.Context) ([]admin.NamespaceView, error) {
-	if s.listNamespacesFn != nil {
-		return s.listNamespacesFn()
+func (s stubService) GetConfig(_ context.Context) (admin.ConfigView, error) {
+	if s.getConfigFn != nil {
+		return s.getConfigFn()
 	}
-	return nil, nil
+	return admin.ConfigView{}, nil
 }
 
-func (s stubService) CreateNamespace(_ context.Context, namespace string) (admin.NamespaceView, error) {
-	if s.createNamespaceFn != nil {
-		return s.createNamespaceFn(namespace)
+func (s stubService) ReplaceConfig(_ context.Context, cfg spec.Config) (admin.ConfigView, error) {
+	if s.replaceConfigFn != nil {
+		return s.replaceConfigFn(cfg)
 	}
-	return admin.NamespaceView{}, nil
-}
-
-func (s stubService) DeleteNamespace(_ context.Context, namespace string) error {
-	if s.deleteNamespaceFn != nil {
-		return s.deleteNamespaceFn(namespace)
-	}
-	return nil
-}
-
-func (s stubService) GetNamespaceConfig(_ context.Context, namespace string) (admin.NamespaceConfigView, error) {
-	if s.getNamespaceConfigFn != nil {
-		return s.getNamespaceConfigFn(namespace)
-	}
-	return admin.NamespaceConfigView{}, nil
-}
-
-func (s stubService) ReplaceNamespaceConfig(_ context.Context, namespace string, cfg spec.Config) (admin.NamespaceConfigView, error) {
-	if s.replaceNamespaceConfigFn != nil {
-		return s.replaceNamespaceConfigFn(namespace, cfg)
-	}
-	return admin.NamespaceConfigView{}, nil
-}
-
-func (s stubService) GetNamespaceRoutes(_ context.Context, namespace string) ([]spec.RouteConfig, error) {
-	if s.getNamespaceRoutesFn != nil {
-		return s.getNamespaceRoutesFn(namespace)
-	}
-	return nil, nil
-}
-
-func (s stubService) CreateRoute(_ context.Context, namespace string, route spec.RouteConfig) (spec.RouteConfig, error) {
-	if s.createRouteFn != nil {
-		return s.createRouteFn(namespace, route)
-	}
-	return spec.RouteConfig{}, nil
-}
-
-func (s stubService) UpdateRoute(_ context.Context, namespace, id string, route spec.RouteConfig) (spec.RouteConfig, error) {
-	if s.updateRouteFn != nil {
-		return s.updateRouteFn(namespace, id, route)
-	}
-	return spec.RouteConfig{}, nil
-}
-
-func (s stubService) DeleteRoute(_ context.Context, namespace, id string) error {
-	if s.deleteRouteFn != nil {
-		return s.deleteRouteFn(namespace, id)
-	}
-	return nil
-}
-
-func (s stubService) GetNamespaceUpstreamPools(_ context.Context, namespace string) (map[string]spec.UpstreamPool, error) {
-	if s.getNamespaceUpstreamsFn != nil {
-		return s.getNamespaceUpstreamsFn(namespace)
-	}
-	return nil, nil
-}
-
-func (s stubService) CreateUpstreamPool(_ context.Context, namespace, id string, pool spec.UpstreamPool) (spec.UpstreamPool, error) {
-	if s.createUpstreamPoolFn != nil {
-		return s.createUpstreamPoolFn(namespace, id, pool)
-	}
-	return spec.UpstreamPool{}, nil
-}
-
-func (s stubService) UpdateUpstreamPool(_ context.Context, namespace, id string, pool spec.UpstreamPool) (spec.UpstreamPool, error) {
-	if s.updateUpstreamPoolFn != nil {
-		return s.updateUpstreamPoolFn(namespace, id, pool)
-	}
-	return spec.UpstreamPool{}, nil
-}
-
-func (s stubService) DeleteUpstreamPool(_ context.Context, namespace, id string) error {
-	if s.deleteUpstreamPoolFn != nil {
-		return s.deleteUpstreamPoolFn(namespace, id)
-	}
-	return nil
+	return admin.ConfigView{}, nil
 }
 
 func performDashboardRequest(handler http.Handler, method, path, body string) *httptest.ResponseRecorder {
@@ -200,10 +112,8 @@ func requireStatus(t *testing.T, rec *httptest.ResponseRecorder, want int) {
 	}
 }
 
-func defaultNamespaceConfig() admin.NamespaceConfigView {
-	return admin.NamespaceConfigView{
-		Namespace: admin.DefaultNamespace,
-		Exists:    true,
+func defaultConfig() admin.ConfigView {
+	return admin.ConfigView{
 		Routes: []spec.RouteConfig{{
 			ID: "r-api", Enabled: true,
 			Match:        spec.RouteMatchConfig{Hosts: []string{"api.example.com"}},
@@ -218,10 +128,9 @@ func defaultNamespaceConfig() admin.NamespaceConfigView {
 func stickyRouteSnapshot() runtime.Snapshot {
 	return runtime.Snapshot{
 		RouteTable: []route.Route{{
-			GlobalID: "default:r-api", LocalID: "r-api", Source: "default",
-			Enabled: true, Hosts: []string{"api.example.com"},
+			ID: "r-api", Enabled: true, Hosts: []string{"api.example.com"},
 			Path:      route.PathMatcher{Kind: route.PathKindPrefix, Value: "/"},
-			Algorithm: "sticky_cookie", UpstreamPool: "default:pool-api",
+			Algorithm: "sticky_cookie", UpstreamPool: "pool-api",
 		}},
 	}
 }
@@ -229,85 +138,58 @@ func stickyRouteSnapshot() runtime.Snapshot {
 func runtimeEndpointSnapshot(t *testing.T) runtime.Snapshot {
 	t.Helper()
 	registry, err := upstream.NewRegistry([]upstream.Pool{{
-		GlobalID:    "default:pool-api",
-		LocalID:     "pool-api",
-		Source:      "default",
+		ID:          "pool-api",
 		Targets:     []upstream.Target{{Raw: "10.0.0.11:8080"}},
 		HealthCheck: &upstream.HealthCheck{Path: "/health", Interval: "30s", Timeout: "3s", ExpectStatus: 200},
 	}})
 	if err != nil {
 		t.Fatalf("NewRegistry() error = %v", err)
 	}
-	pool, ok := registry.Get("default:pool-api")
+	pool, ok := registry.Get("pool-api")
 	if !ok {
-		t.Fatal("registry.Get(default:pool-api) returned no pool")
+		t.Fatal("registry.Get(pool-api) returned no pool")
 	}
 	pool.SetTargetUnhealthy(0, time.Unix(1700000100, 0).UTC(), "unexpected status: 503")
 	return runtime.Snapshot{
 		RaftIdentity: config.RaftIdentity{NodeID: "node-1"},
-		ProxyConfigs: []spec.LoadedConfig{{
-			Source: "default",
-			Path:   "raft://namespaces/default",
-			Config: spec.Config{
-				Name: "default",
-				Routes: []spec.RouteConfig{{
-					ID:           "r-api",
-					Enabled:      true,
-					Match:        spec.RouteMatchConfig{Hosts: []string{"api.example.com"}},
-					UpstreamPool: "pool-api",
-				}},
-				UpstreamPools: map[string]spec.UpstreamPool{
-					"pool-api": {Upstreams: []string{"10.0.0.11:8080"}},
-				},
+		ProxyConfig: spec.Config{
+			Routes: []spec.RouteConfig{{
+				ID:           "r-api",
+				Enabled:      true,
+				Match:        spec.RouteMatchConfig{Hosts: []string{"api.example.com"}},
+				UpstreamPool: "pool-api",
+			}},
+			UpstreamPools: map[string]spec.UpstreamPool{
+				"pool-api": {Upstreams: []string{"10.0.0.11:8080"}},
 			},
-		}},
+		},
 		RouteTable: []route.Route{{
-			GlobalID: "default:r-api", LocalID: "r-api", Source: "default",
-			Enabled: true, Hosts: []string{"api.example.com"},
+			ID:           "r-api",
+			Enabled:      true,
+			Hosts:        []string{"api.example.com"},
 			Path:         route.PathMatcher{Kind: route.PathKindPrefix, Value: "/api/"},
 			Algorithm:    "round_robin",
-			UpstreamPool: "default:pool-api",
+			UpstreamPool: "pool-api",
 		}},
 		Upstreams: registry,
 		AppliedAt: time.Unix(1700000000, 0).UTC(),
 	}
 }
 
-func namespacedConfigHandler(t *testing.T) http.Handler {
+func configHandler() http.Handler {
 	return NewHandler(runtime.NewState(runtime.Snapshot{}), stubService{
-		getNamespaceConfigFn: func(namespace string) (admin.NamespaceConfigView, error) {
-			requireDefaultNamespace(t, namespace)
-			return defaultNamespaceConfig(), nil
-		},
-	})
-}
-
-func createNamespaceHandler(t *testing.T) http.Handler {
-	return NewHandler(runtime.NewState(runtime.Snapshot{}), stubService{
-		createNamespaceFn: func(namespace string) (admin.NamespaceView, error) {
-			requireNamespace(t, namespace, "admin")
-			return admin.NamespaceView{Namespace: namespace, Path: "raft://namespaces/admin", Exists: true}, nil
+		getConfigFn: func() (admin.ConfigView, error) {
+			return defaultConfig(), nil
 		},
 	})
 }
 
 func validationErrorHandler() http.Handler {
 	return NewHandler(runtime.NewState(runtime.Snapshot{}), stubService{
-		replaceNamespaceConfigFn: func(string, spec.Config) (admin.NamespaceConfigView, error) {
-			return admin.NamespaceConfigView{}, duplicateRouteAPIError()
+		replaceConfigFn: func(spec.Config) (admin.ConfigView, error) {
+			return admin.ConfigView{}, duplicateRouteAPIError()
 		},
 	})
-}
-
-func requireDefaultNamespace(t *testing.T, namespace string) {
-	requireNamespace(t, namespace, admin.DefaultNamespace)
-}
-
-func requireNamespace(t *testing.T, got, want string) {
-	t.Helper()
-	if got != want {
-		t.Fatalf("namespace = %q, want %q", got, want)
-	}
 }
 
 func requireRouteID(t *testing.T, got, want string) {
@@ -317,9 +199,8 @@ func requireRouteID(t *testing.T, got, want string) {
 	}
 }
 
-func requireNamespaceConfigCounts(t *testing.T, body admin.NamespaceConfigView) {
+func requireConfigCounts(t *testing.T, body admin.ConfigView) {
 	t.Helper()
-	requireNamespace(t, body.Namespace, admin.DefaultNamespace)
 	requireCount(t, "Routes", len(body.Routes), 1)
 	requireCount(t, "UpstreamPools", len(body.UpstreamPools), 1)
 }
@@ -341,23 +222,20 @@ func duplicateRouteAPIError() *admin.APIError {
 	}
 }
 
-func TestNamespacedConfigEndpoint_ReturnsEditableConfig(t *testing.T) {
-	rec := performDashboardRequest(namespacedConfigHandler(t), http.MethodGet, "/api/namespaces/default/config", "")
+func TestConfigEndpoint_ReturnsEditableConfig(t *testing.T) {
+	rec := performDashboardRequest(configHandler(), http.MethodGet, "/api/config", "")
 	requireStatus(t, rec, http.StatusOK)
-	var body admin.NamespaceConfigView
+	var body admin.ConfigView
 	decodeJSON(t, rec, &body)
-	requireNamespaceConfigCounts(t, body)
+	requireConfigCounts(t, body)
 }
 
-func TestReplaceNamespacedConfigEndpoint_ReplacesEditableConfig(t *testing.T) {
+func TestReplaceConfigEndpoint_ReplacesEditableConfig(t *testing.T) {
 	var gotConfig spec.Config
 	handler := NewHandler(runtime.NewState(runtime.Snapshot{}), stubService{
-		replaceNamespaceConfigFn: func(namespace string, cfg spec.Config) (admin.NamespaceConfigView, error) {
-			requireDefaultNamespace(t, namespace)
+		replaceConfigFn: func(cfg spec.Config) (admin.ConfigView, error) {
 			gotConfig = cfg
-			return admin.NamespaceConfigView{
-				Namespace:     namespace,
-				Exists:        true,
+			return admin.ConfigView{
 				Routes:        cfg.Routes,
 				UpstreamPools: cfg.UpstreamPools,
 			}, nil
@@ -368,15 +246,20 @@ func TestReplaceNamespacedConfigEndpoint_ReplacesEditableConfig(t *testing.T) {
 		"upstream_pools":{"pool-api":{"upstreams":["10.0.0.11:8080"]}}
 	}`
 
-	rec := performDashboardRequest(handler, http.MethodPut, "/api/namespaces/default/config", body)
+	rec := performDashboardRequest(handler, http.MethodPut, "/api/config", body)
 	requireStatus(t, rec, http.StatusOK)
 	if got, want := len(gotConfig.Routes), 1; got != want {
 		t.Fatalf("len(gotConfig.Routes) = %d, want %d", got, want)
 	}
-	var response admin.NamespaceConfigView
+	var response admin.ConfigView
 	decodeJSON(t, rec, &response)
-	requireNamespace(t, response.Namespace, admin.DefaultNamespace)
 	requireCount(t, "UpstreamPools", len(response.UpstreamPools), 1)
+}
+
+func TestConfigEndpoint_MethodNotAllowed(t *testing.T) {
+	handler := NewHandler(runtime.NewState(runtime.Snapshot{}), stubService{})
+	rec := performDashboardRequest(handler, http.MethodPost, "/api/config", `{}`)
+	requireStatus(t, rec, http.StatusMethodNotAllowed)
 }
 
 func TestRuntimeConfigEndpoint_ExposesRouteAlgorithm(t *testing.T) {
@@ -405,12 +288,29 @@ func TestRuntimeEndpoint_ReturnsConsolidatedRuntimeView(t *testing.T) {
 	requireCount(t, "Routes", len(body.Routes), 1)
 	requireCount(t, "Upstreams", len(body.Upstreams), 1)
 	requireCount(t, "Targets", len(body.Upstreams[0].Targets), 1)
+	if got, want := body.Config.RouteCount, 1; got != want {
+		t.Fatalf("Config.RouteCount = %d, want %d", got, want)
+	}
+	if got, want := body.Config.UpstreamPoolCount, 1; got != want {
+		t.Fatalf("Config.UpstreamPoolCount = %d, want %d", got, want)
+	}
+	if got, want := body.Routes[0].ID, "r-api"; got != want {
+		t.Fatalf("Routes[0].ID = %q, want %q", got, want)
+	}
+	if got, want := body.Upstreams[0].ID, "pool-api"; got != want {
+		t.Fatalf("Upstreams[0].ID = %q, want %q", got, want)
+	}
 	target := body.Upstreams[0].Targets[0]
 	if target.Address != "10.0.0.11:8080" || target.Healthy {
 		t.Fatalf("target = %+v, want unhealthy 10.0.0.11:8080", target)
 	}
 	if target.LastCheckedAt == nil || target.LastError == "" {
 		t.Fatalf("target = %+v, want health detail", target)
+	}
+	var raw map[string]interface{}
+	decodeJSON(t, performDashboardRequest(handler, http.MethodGet, "/api/runtime", ""), &raw)
+	if _, ok := raw["config_sources"]; ok {
+		t.Fatalf("runtime body = %+v, want config_sources omitted", raw)
 	}
 }
 
@@ -499,18 +399,10 @@ func TestClusterEndpoint_ReturnsProviderView(t *testing.T) {
 	}
 }
 
-func TestCreateNamespaceEndpoint_CreatesNamespace(t *testing.T) {
-	rec := performDashboardRequest(createNamespaceHandler(t), http.MethodPost, "/api/namespaces", `{"namespace":"admin"}`)
-	requireStatus(t, rec, http.StatusCreated)
-	var body admin.NamespaceView
-	decodeJSON(t, rec, &body)
-	requireNamespace(t, body.Namespace, "admin")
-}
-
 func TestConfigAPI_NotLeaderErrorIncludesLeaderAddress(t *testing.T) {
 	handler := NewHandler(runtime.NewState(runtime.Snapshot{}), stubService{
-		createNamespaceFn: func(string) (admin.NamespaceView, error) {
-			return admin.NamespaceView{}, &admin.APIError{
+		replaceConfigFn: func(spec.Config) (admin.ConfigView, error) {
+			return admin.ConfigView{}, &admin.APIError{
 				StatusCode: http.StatusConflict,
 				Message:    "configuration writes must be sent to the raft leader",
 				Err:        state.NewNotLeaderError("127.0.0.1:9090"),
@@ -518,7 +410,7 @@ func TestConfigAPI_NotLeaderErrorIncludesLeaderAddress(t *testing.T) {
 		},
 	})
 
-	req := httptest.NewRequest(http.MethodPost, "/api/namespaces", strings.NewReader(`{"namespace":"admin"}`))
+	req := httptest.NewRequest(http.MethodPut, "/api/config", strings.NewReader(`{"routes":[],"upstream_pools":{}}`))
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -714,26 +606,12 @@ func TestNodeJoinClusterEndpoint_CallsLifecycle(t *testing.T) {
 	}
 }
 
-func TestDeleteNamespaceEndpoint_DeletesNamespace(t *testing.T) {
-	handler := NewHandler(runtime.NewState(runtime.Snapshot{}), stubService{
-		deleteNamespaceFn: func(namespace string) error {
-			if namespace != "admin" {
-				t.Fatalf("namespace = %q, want %q", namespace, "admin")
-			}
-			return nil
-		},
-	})
-
-	rec := performDashboardRequest(handler, http.MethodDelete, "/api/namespaces/admin", "")
-	requireStatus(t, rec, http.StatusNoContent)
-}
-
 func TestValidationError_ReturnsStructuredErrorBody(t *testing.T) {
 	requestBody := `{
 		"routes":[{"id":"r-api","enabled":true,"match":{"hosts":["api.example.com"]},"upstream_pool":"pool-api"}],
 		"upstream_pools":{"pool-api":{"upstreams":["10.0.0.11:8080"]}}
 	}`
-	rec := performDashboardRequest(validationErrorHandler(), http.MethodPut, "/api/namespaces/default/config", requestBody)
+	rec := performDashboardRequest(validationErrorHandler(), http.MethodPut, "/api/config", requestBody)
 	requireStatus(t, rec, http.StatusUnprocessableEntity)
 	var body admin.APIError
 	decodeJSON(t, rec, &body)
@@ -751,7 +629,12 @@ func TestRemovedAPIEndpoints_ReturnNotFound(t *testing.T) {
 		method string
 		path   string
 	}{
-		{http.MethodGet, "/api/config"},
+		{http.MethodGet, "/api/namespaces"},
+		{http.MethodPost, "/api/namespaces"},
+		{http.MethodGet, "/api/namespaces/default"},
+		{http.MethodDelete, "/api/namespaces/default"},
+		{http.MethodGet, "/api/namespaces/default/config"},
+		{http.MethodPut, "/api/namespaces/default/config"},
 		{http.MethodGet, "/api/runtime/config"},
 		{http.MethodGet, "/api/app-config"},
 		{http.MethodGet, "/api/proxy-configs"},

@@ -13,11 +13,11 @@ import (
 const legacyConfigStoreValue = "raft"
 
 type RuntimeView struct {
-	AppliedAt     time.Time                 `json:"applied_at"`
-	Node          RuntimeNodeView           `json:"node"`
-	ConfigSources []RuntimeConfigSourceView `json:"config_sources"`
-	Routes        []RouteView               `json:"routes"`
-	Upstreams     []RuntimeUpstreamView     `json:"upstreams"`
+	AppliedAt time.Time             `json:"applied_at"`
+	Node      RuntimeNodeView       `json:"node"`
+	Config    RuntimeConfigView     `json:"config"`
+	Routes    []RouteView           `json:"routes"`
+	Upstreams []RuntimeUpstreamView `json:"upstreams"`
 }
 
 type RuntimeNodeView struct {
@@ -25,18 +25,13 @@ type RuntimeNodeView struct {
 	ConfigStore string `json:"config_store"`
 }
 
-type RuntimeConfigSourceView struct {
-	Source            string `json:"source"`
-	Path              string `json:"path,omitempty"`
-	Name              string `json:"name,omitempty"`
-	RouteCount        int    `json:"route_count"`
-	UpstreamPoolCount int    `json:"upstream_pool_count"`
+type RuntimeConfigView struct {
+	RouteCount        int `json:"route_count"`
+	UpstreamPoolCount int `json:"upstream_pool_count"`
 }
 
 type RuntimeUpstreamView struct {
-	GlobalID    string                `json:"global_id"`
-	LocalID     string                `json:"local_id"`
-	Source      string                `json:"source"`
+	ID          string                `json:"id"`
 	Targets     []RuntimeTargetView   `json:"targets"`
 	HealthCheck *upstream.HealthCheck `json:"health_check,omitempty"`
 }
@@ -135,9 +130,7 @@ type ClusterMemberView struct {
 }
 
 type RouteView struct {
-	GlobalID     string          `json:"global_id"`
-	LocalID      string          `json:"local_id"`
-	Source       string          `json:"source"`
+	ID           string          `json:"id"`
 	Enabled      bool            `json:"enabled"`
 	Hosts        []string        `json:"hosts"`
 	Path         PathMatcherView `json:"path"`
@@ -152,11 +145,11 @@ type PathMatcherView struct {
 
 func buildRuntimeView(snapshot runtime.Snapshot) RuntimeView {
 	return RuntimeView{
-		AppliedAt:     snapshot.AppliedAt,
-		Node:          buildRuntimeNodeView(snapshot),
-		ConfigSources: buildRuntimeConfigSources(snapshot.ProxyConfigs),
-		Routes:        buildRouteViews(snapshot.RouteTable),
-		Upstreams:     buildRuntimeUpstreamViews(snapshot.Upstreams),
+		AppliedAt: snapshot.AppliedAt,
+		Node:      buildRuntimeNodeView(snapshot),
+		Config:    buildRuntimeConfigView(snapshot.ProxyConfig),
+		Routes:    buildRouteViews(snapshot.RouteTable),
+		Upstreams: buildRuntimeUpstreamViews(snapshot.Upstreams),
 	}
 }
 
@@ -231,18 +224,11 @@ func legacyConfigStoreString() string {
 	return legacyConfigStoreValue
 }
 
-func buildRuntimeConfigSources(configs []spec.LoadedConfig) []RuntimeConfigSourceView {
-	views := make([]RuntimeConfigSourceView, 0, len(configs))
-	for _, loaded := range configs {
-		views = append(views, RuntimeConfigSourceView{
-			Source:            loaded.Source,
-			Path:              loaded.Path,
-			Name:              loaded.Config.Name,
-			RouteCount:        len(loaded.Config.Routes),
-			UpstreamPoolCount: len(loaded.Config.UpstreamPools),
-		})
+func buildRuntimeConfigView(cfg spec.Config) RuntimeConfigView {
+	return RuntimeConfigView{
+		RouteCount:        len(cfg.Routes),
+		UpstreamPoolCount: len(cfg.UpstreamPools),
 	}
-	return views
 }
 
 func buildRouteViews(routes []route.Route) []RouteView {
@@ -297,9 +283,7 @@ func pathKindString(kind route.PathKind) string {
 
 func buildRouteView(item route.Route) RouteView {
 	return RouteView{
-		GlobalID:     item.GlobalID,
-		LocalID:      item.LocalID,
-		Source:       item.Source,
+		ID:           item.ID,
 		Enabled:      item.Enabled,
 		Hosts:        append([]string(nil), item.Hosts...),
 		Path:         buildPathMatcherView(item.Path),
@@ -310,16 +294,14 @@ func buildRouteView(item route.Route) RouteView {
 
 func sortedUpstreamPools(pools []*upstream.Pool) []*upstream.Pool {
 	sort.Slice(pools, func(i, j int) bool {
-		return pools[i].GlobalID < pools[j].GlobalID
+		return pools[i].ID < pools[j].ID
 	})
 	return pools
 }
 
 func buildRuntimeUpstreamView(pool *upstream.Pool) RuntimeUpstreamView {
 	return RuntimeUpstreamView{
-		GlobalID:    pool.GlobalID,
-		LocalID:     pool.LocalID,
-		Source:      pool.Source,
+		ID:          pool.ID,
 		Targets:     buildRuntimeTargetViews(pool),
 		HealthCheck: pool.HealthCheck,
 	}

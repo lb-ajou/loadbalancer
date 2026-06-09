@@ -52,7 +52,7 @@ func TestAppStartAndStopHealthChecker(t *testing.T) {
 
 func TestAppSwapHealthChecker_ReplacesCheckerAndStartsNewContext(t *testing.T) {
 	registry, err := upstream.NewRegistry([]upstream.Pool{
-		{GlobalID: "default:pool-api"},
+		{ID: "pool-api"},
 	})
 	if err != nil {
 		t.Fatalf("upstream.NewRegistry() error = %v", err)
