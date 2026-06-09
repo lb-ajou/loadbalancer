@@ -31,7 +31,7 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o composes/raft-ha-cluster/.out/
 docker compose -f composes/raft-ha-cluster/compose.yaml up -d --build
 ```
 
-proxy service healthcheck는 clean node에서도 응답하는 `/api/node/cluster-status`를 사용한다. namespace config API는 bootstrap/join 이후 Raft store가 열린 뒤 검증용으로 조회한다.
+proxy service healthcheck는 clean node에서도 응답하는 `/api/node/cluster-status`를 사용한다. config API는 bootstrap/join 이후 Raft store가 열린 뒤 검증용으로 조회한다.
 
 clean bootstrap부터 다시 시작하려면 volume까지 삭제한다.
 
@@ -78,9 +78,9 @@ curl http://localhost:19090/api/node/cluster-status
 curl http://localhost:19091/api/node/cluster-status
 curl http://localhost:19092/api/node/cluster-status
 
-curl http://localhost:19090/api/namespaces/default/config
-curl http://localhost:19091/api/namespaces/default/config
-curl http://localhost:19092/api/namespaces/default/config
+curl http://localhost:19090/api/config
+curl http://localhost:19091/api/config
+curl http://localhost:19092/api/config
 
 curl -H 'Host: raft.localtest.me' http://localhost:18080/api/info
 curl -H 'Host: raft.localtest.me' http://localhost:18081/api/info

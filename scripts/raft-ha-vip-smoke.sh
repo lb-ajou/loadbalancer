@@ -95,7 +95,7 @@ wait_http() {
 
 config_url() {
   local node="$1"
-  printf "%s/api/namespaces/default/config" "$(dashboard_url "$node")"
+  printf "%s/api/config" "$(dashboard_url "$node")"
 }
 
 lifecycle_cli() {
@@ -556,7 +556,7 @@ main() {
 
   wait_http "http://localhost:19090/api/status" "proxy-1 dashboard"
   bootstrap_cluster
-  wait_http "http://localhost:19090/api/namespaces/default/config" "proxy-1 config API"
+  wait_http "http://localhost:19090/api/config" "proxy-1 config API"
 
   log "create initial route through node-1 leader"
   create_initial_config node-1
@@ -573,8 +573,8 @@ main() {
   wait_http "http://localhost:19092/api/status" "proxy-3 dashboard"
   join_cluster node-2 node-2 "0.0.0.0:7002" "proxy-2:7002"
   join_cluster node-3 node-3 "0.0.0.0:7003" "proxy-3:7003"
-  wait_http "http://localhost:19091/api/namespaces/default/config" "proxy-2 config API"
-  wait_http "http://localhost:19092/api/namespaces/default/config" "proxy-3 config API"
+  wait_http "http://localhost:19091/api/config" "proxy-2 config API"
+  wait_http "http://localhost:19092/api/config" "proxy-3 config API"
 
   log "verify joined nodes caught up with raft state"
   wait_config_has_route node-2 "r-raft"
@@ -610,7 +610,7 @@ main() {
 
   log "restart old leader and verify catch-up"
   compose up -d proxy-1
-  wait_http "http://localhost:19090/api/namespaces/default/config" "proxy-1 dashboard after rejoin"
+  wait_http "http://localhost:19090/api/config" "proxy-1 dashboard after rejoin"
   wait_config_has_route node-1 "r-failover"
   wait_config_has_pool node-1 "pool-failover"
 

@@ -25,11 +25,10 @@ curl -i http://localhost:18683/health
 
 ## 로컬 프록시 설정 예시
 
-아래 payload를 `default` namespace에 Admin API로 기록한다.
+아래 payload를 Admin API의 단일 proxy config로 기록한다.
 
 ```json
 {
-  "name": "least-connection-check",
   "routes": [
     {
       "id": "r-least-connection",

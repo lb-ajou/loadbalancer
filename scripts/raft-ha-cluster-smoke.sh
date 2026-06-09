@@ -91,7 +91,7 @@ wait_http() {
 
 config_url() {
   local node="$1"
-  printf "%s/api/namespaces/default/config" "$(dashboard_url "$node")"
+  printf "%s/api/config" "$(dashboard_url "$node")"
 }
 
 lifecycle_cli() {
@@ -622,7 +622,7 @@ main() {
 
   wait_http "http://localhost:19090/api/status" "proxy-1 dashboard"
   bootstrap_cluster node-1 node-1 "0.0.0.0:7001" "proxy-1:7001"
-  wait_http "http://localhost:19090/api/namespaces/default/config" "proxy-1 config API"
+  wait_http "http://localhost:19090/api/config" "proxy-1 config API"
   require_status_has_raft node-1
 
   log "create initial route through proxy-1 leader"
@@ -640,8 +640,8 @@ main() {
   wait_http "http://localhost:19092/api/status" "proxy-3 dashboard"
   join_cluster node-2 node-2 "0.0.0.0:7002" "proxy-2:7002"
   join_cluster node-3 node-3 "0.0.0.0:7003" "proxy-3:7003"
-  wait_http "http://localhost:19091/api/namespaces/default/config" "proxy-2 config API"
-  wait_http "http://localhost:19092/api/namespaces/default/config" "proxy-3 config API"
+  wait_http "http://localhost:19091/api/config" "proxy-2 config API"
+  wait_http "http://localhost:19092/api/config" "proxy-3 config API"
   require_cluster_has_member node-1 "node-1"
   require_cluster_has_member node-1 "node-2"
   require_cluster_has_member node-1 "node-3"
@@ -698,7 +698,7 @@ main() {
 
   log "restart old leader and verify catch-up"
   compose up -d proxy-1
-  wait_http "http://localhost:19090/api/namespaces/default/config" "proxy-1 dashboard after rejoin"
+  wait_http "http://localhost:19090/api/config" "proxy-1 dashboard after rejoin"
   wait_config_has_route node-1 "r-failover"
   wait_config_has_pool node-1 "pool-failover"
   wait_proxy_route node-1 "raft-failover.localtest.me"
@@ -706,9 +706,9 @@ main() {
   log "verify persistence across stop/start"
   compose stop proxy-1 proxy-2 proxy-3
   compose up -d proxy-1 proxy-2 proxy-3
-  wait_http "http://localhost:19090/api/namespaces/default/config" "proxy-1 dashboard after persistence restart"
-  wait_http "http://localhost:19091/api/namespaces/default/config" "proxy-2 dashboard after persistence restart"
-  wait_http "http://localhost:19092/api/namespaces/default/config" "proxy-3 dashboard after persistence restart"
+  wait_http "http://localhost:19090/api/config" "proxy-1 dashboard after persistence restart"
+  wait_http "http://localhost:19091/api/config" "proxy-2 dashboard after persistence restart"
+  wait_http "http://localhost:19092/api/config" "proxy-3 dashboard after persistence restart"
   wait_config_has_route node-1 "r-failover"
   wait_config_has_route node-2 "r-failover"
   wait_config_has_route node-3 "r-failover"

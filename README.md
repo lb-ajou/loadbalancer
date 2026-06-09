@@ -8,7 +8,7 @@ Raft 기반 상태 저장소와 VIP failover를 포함한 L7 reverse proxy입니
 
 - HTTP reverse proxy
 - Host/path 기반 route 매칭
-- Namespace 단위 프록시 설정 관리
+- 클러스터 단일 프록시 설정 관리
 - Upstream pool과 health check
 - `round_robin`, `sticky_cookie`, `5_tuple_hash`, `least_connection` 라우팅 알고리즘
 - Dashboard UI와 JSON API
@@ -163,18 +163,15 @@ tools/least-connection-check.sh
 
 ## 설정 API
 
-Dashboard API는 namespace 단위로 desired state를 관리합니다.
+Dashboard API는 클러스터 전체에 적용되는 단일 proxy desired state를 관리합니다.
 
 주요 endpoint:
 
 - `GET /api/status`
 - `GET /api/runtime`
 - `GET /api/cluster`
-- `GET /api/namespaces`
-- `POST /api/namespaces`
-- `DELETE /api/namespaces/{namespace}`
-- `GET /api/namespaces/{namespace}/config`
-- `PUT /api/namespaces/{namespace}/config`
+- `GET /api/config`
+- `PUT /api/config`
 - `POST /api/cluster/bootstrap`
 - `POST /api/node/join-cluster`
 - `GET /api/node/cluster-status`
@@ -212,7 +209,7 @@ Dashboard API는 namespace 단위로 desired state를 관리합니다.
 저장:
 
 ```bash
-curl -X PUT http://localhost:9090/api/namespaces/default/config \
+curl -X PUT http://localhost:9090/api/config \
   -H 'Content-Type: application/json' \
   --data @config.json
 ```

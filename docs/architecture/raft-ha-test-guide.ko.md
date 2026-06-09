@@ -69,7 +69,7 @@ Compose build는 `busybox:1.31.1` 이미지를 사용한다. 이미지가 로컬
 
 `proxy-2`, `proxy-3`도 clean node로 시작한다. smoke script가 각 노드에 `reverseproxy cluster join` CLI로 peer dashboard/admin endpoint 후보를 전달하면, 노드는 후보를 순서대로 시도해 cluster에 join한 뒤 leader가 가진 Raft 상태를 따라온다.
 
-compose proxy healthcheck는 bootstrap 전 clean node도 ready로 볼 수 있도록 `/api/node/cluster-status`를 사용한다. `/api/namespaces/default/config`는 Raft store가 열린 뒤 설정 복제 검증 단계에서 조회한다.
+compose proxy healthcheck는 bootstrap 전 clean node도 ready로 볼 수 있도록 `/api/node/cluster-status`를 사용한다. `/api/config`는 Raft store가 열린 뒤 설정 복제 검증 단계에서 조회한다.
 
 각 proxy의 app config는 Raft node ID, bind address, advertise address를 포함하지 않는다. 이 값들은 smoke script의 lifecycle CLI 입력으로 전달되고, 성공 후 `/app/data/raft` 안의 node-local metadata로 저장된다.
 
@@ -198,17 +198,17 @@ curl -fsS http://localhost:19092/api/node/cluster-status | jq
 각 node의 dashboard config API가 같은 route와 pool을 반환하는지 확인한다.
 
 ```bash
-curl -fsS http://localhost:19090/api/namespaces/default/config | jq
-curl -fsS http://localhost:19091/api/namespaces/default/config | jq
-curl -fsS http://localhost:19092/api/namespaces/default/config | jq
+curl -fsS http://localhost:19090/api/config | jq
+curl -fsS http://localhost:19091/api/config | jq
+curl -fsS http://localhost:19092/api/config | jq
 ```
 
 최소 확인 기준은 다음과 같다.
 
 ```bash
-curl -fsS http://localhost:19090/api/namespaces/default/config | jq -e '.routes[] | select(.id == "r-raft")'
-curl -fsS http://localhost:19091/api/namespaces/default/config | jq -e '.routes[] | select(.id == "r-raft")'
-curl -fsS http://localhost:19092/api/namespaces/default/config | jq -e '.routes[] | select(.id == "r-raft")'
+curl -fsS http://localhost:19090/api/config | jq -e '.routes[] | select(.id == "r-raft")'
+curl -fsS http://localhost:19091/api/config | jq -e '.routes[] | select(.id == "r-raft")'
+curl -fsS http://localhost:19092/api/config | jq -e '.routes[] | select(.id == "r-raft")'
 ```
 
 ### 4. Proxy routing 확인
@@ -225,10 +225,10 @@ curl -fsS -H 'Host: raft.localtest.me' http://localhost:18082/api/info | jq
 
 ### 5. Leader write와 복제 확인
 
-초기 상태에서는 `proxy-1`이 bootstrap leader다. dashboard API로 namespace config 전체를 저장해 새 upstream pool과 route를 추가한다.
+초기 상태에서는 `proxy-1`이 bootstrap leader다. dashboard API로 proxy config 전체를 저장해 새 upstream pool과 route를 추가한다.
 
 ```bash
-curl -fsS http://localhost:19090/api/namespaces/default/config |
+curl -fsS http://localhost:19090/api/config |
   jq '{
     routes: (((.routes // []) | map(select(.id != "r-manual"))) + [{
       "id": "r-manual",
@@ -252,7 +252,7 @@ curl -fsS http://localhost:19090/api/namespaces/default/config |
     })
   }' >/tmp/raft-default-config.json
 
-curl -fsS -X PUT http://localhost:19090/api/namespaces/default/config \
+curl -fsS -X PUT http://localhost:19090/api/config \
   -H 'Content-Type: application/json' \
   -d @/tmp/raft-default-config.json
 ```
@@ -260,9 +260,9 @@ curl -fsS -X PUT http://localhost:19090/api/namespaces/default/config \
 모든 node에 route가 복제됐는지 확인한다.
 
 ```bash
-curl -fsS http://localhost:19090/api/namespaces/default/config | jq -e '.routes[] | select(.id == "r-manual")'
-curl -fsS http://localhost:19091/api/namespaces/default/config | jq -e '.routes[] | select(.id == "r-manual")'
-curl -fsS http://localhost:19092/api/namespaces/default/config | jq -e '.routes[] | select(.id == "r-manual")'
+curl -fsS http://localhost:19090/api/config | jq -e '.routes[] | select(.id == "r-manual")'
+curl -fsS http://localhost:19091/api/config | jq -e '.routes[] | select(.id == "r-manual")'
+curl -fsS http://localhost:19092/api/config | jq -e '.routes[] | select(.id == "r-manual")'
 ```
 
 새 route로 routing이 되는지 확인한다.
@@ -279,7 +279,7 @@ curl -fsS -H 'Host: raft-manual.localtest.me' http://localhost:18082/api/info | 
 
 ```bash
 curl -sS -o /tmp/raft-follower-write.json -w '%{http_code}\n' \
-  -X PUT http://localhost:19091/api/namespaces/default/config \
+  -X PUT http://localhost:19091/api/config \
   -H 'Content-Type: application/json' \
   -d '{
     "routes": [{
@@ -350,7 +350,7 @@ docker compose -f composes/raft-ha-cluster/compose.yaml stop proxy-1
 잠시 대기한 뒤 `proxy-2`, `proxy-3` 중 하나에 config 저장 요청을 보낸다. 한 node가 leader라면 성공하고, follower라면 `409 not_raft_leader`가 반환된다. 아래 예시는 먼저 `proxy-2`에 요청한다.
 
 ```bash
-curl -fsS http://localhost:19091/api/namespaces/default/config |
+curl -fsS http://localhost:19091/api/config |
   jq '{
     routes: (((.routes // []) | map(select(.id != "r-manual-failover"))) + [{
       "id": "r-manual-failover",
@@ -375,7 +375,7 @@ curl -fsS http://localhost:19091/api/namespaces/default/config |
   }' >/tmp/raft-failover-config.json
 
 curl -sS -o /tmp/raft-failover-write.json -w '%{http_code}\n' \
-  -X PUT http://localhost:19091/api/namespaces/default/config \
+  -X PUT http://localhost:19091/api/config \
   -H 'Content-Type: application/json' \
   -d @/tmp/raft-failover-config.json
 ```
@@ -395,8 +395,8 @@ LEADER_DASHBOARD=http://localhost:19092
 `proxy-2`, `proxy-3`에서 failover route가 보이고 routing이 되는지 확인한다.
 
 ```bash
-curl -fsS http://localhost:19091/api/namespaces/default/config | jq -e '.routes[] | select(.id == "r-manual-failover")'
-curl -fsS http://localhost:19092/api/namespaces/default/config | jq -e '.routes[] | select(.id == "r-manual-failover")'
+curl -fsS http://localhost:19091/api/config | jq -e '.routes[] | select(.id == "r-manual-failover")'
+curl -fsS http://localhost:19092/api/config | jq -e '.routes[] | select(.id == "r-manual-failover")'
 curl -fsS -H 'Host: raft-manual-failover.localtest.me' http://localhost:18081/api/info | jq
 curl -fsS -H 'Host: raft-manual-failover.localtest.me' http://localhost:18082/api/info | jq
 ```
@@ -412,7 +412,7 @@ docker compose -f composes/raft-ha-cluster/compose.yaml up -d proxy-1
 `proxy-1`이 failover 중 생성된 route를 catch-up 했는지 확인한다.
 
 ```bash
-curl -fsS http://localhost:19090/api/namespaces/default/config | jq -e '.routes[] | select(.id == "r-manual-failover")'
+curl -fsS http://localhost:19090/api/config | jq -e '.routes[] | select(.id == "r-manual-failover")'
 curl -fsS -H 'Host: raft-manual-failover.localtest.me' http://localhost:18080/api/info | jq
 ```
 
@@ -428,9 +428,9 @@ docker compose -f composes/raft-ha-cluster/compose.yaml up -d proxy-1 proxy-2 pr
 재시작 후 이전에 생성한 route가 유지되는지 확인한다.
 
 ```bash
-curl -fsS http://localhost:19090/api/namespaces/default/config | jq -e '.routes[] | select(.id == "r-manual")'
-curl -fsS http://localhost:19091/api/namespaces/default/config | jq -e '.routes[] | select(.id == "r-manual")'
-curl -fsS http://localhost:19092/api/namespaces/default/config | jq -e '.routes[] | select(.id == "r-manual")'
+curl -fsS http://localhost:19090/api/config | jq -e '.routes[] | select(.id == "r-manual")'
+curl -fsS http://localhost:19091/api/config | jq -e '.routes[] | select(.id == "r-manual")'
+curl -fsS http://localhost:19092/api/config | jq -e '.routes[] | select(.id == "r-manual")'
 ```
 
 ## 정리

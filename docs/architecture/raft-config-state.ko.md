@@ -20,7 +20,7 @@
 - VIP failover 설정은 cluster-wide 값과 node-local 값으로 나뉜다. `vip.address`, GARP 송신 횟수/간격, 획득 지연, 종료 시 release 정책은 Raft desired state에 들어갈 cluster 값이다. `vip.interface`는 노드가 속한 Linux 네트워크 환경에 종속되므로 Raft에 넣지 않고 bootstrap/join 시 각 노드가 제공하는 local 값으로 다룬다.
 - `vip.enabled` 입력은 설정 모델에서 제거됐다. 현재 `/api/status`의 `vip.enabled` 응답은 호환 필드로 유지하되, 설정 입력에서는 VIP address가 있으면 VIP가 활성인 것으로 본다.
 - 프록시 route/upstream JSON은 더 이상 앱 부팅 입력이 아니다. 새 Raft bootstrap node는 빈 desired state로 시작하고, 초기 route/upstream도 Admin API 쓰기를 통해 Raft log에 기록한다.
-- Raft log에는 namespace, route, upstream pool, cluster VIP 단위의 Admin API command만 기록한다. JSON seed/import 전용 command는 없다.
+- Raft log에는 proxy config 전체 교체, cluster VIP, Raft timing 단위의 command만 기록한다. route/upstream pool 개별 변경 command나 JSON seed/import 전용 command는 없다.
 - 기존 Raft data dir이 있으면 재시작한 노드는 남아 있는 Raft log/snapshot에서 desired config를 복원한다. 로컬 프록시 JSON 파일을 다시 읽어 클러스터 상태를 덮어쓰지 않는다.
 - Join 모드는 로컬 프록시 JSON이나 app config의 join 주소를 읽지 않는다. 새 노드는 `/api/node/join-cluster`로 받은 peer 후보를 순서대로 시도해 leader의 `POST /api/cluster/join`에 자신의 `node_id`와 Raft advertise address를 등록한 뒤 leader가 가진 Raft 상태를 따라간다.
 - `/api/cluster/join`은 admin/control-plane endpoint다. 이 POC에는 내장 인증이 없으므로 보호된 admin network에만 노출하거나 외부 인증, network policy 뒤에 둔다.

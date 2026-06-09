@@ -16,7 +16,7 @@
 docker compose -f composes/benchmark-check/compose.yaml up -d --build
 ```
 
-`proxy-init` 서비스가 reverseproxy의 Admin API에 `default` namespace desired state를 기록한다. reverseproxy용 route/upstream 설정은 정적 JSON 파일로 마운트하지 않는다.
+`proxy-init` 서비스가 reverseproxy의 Admin API에 단일 proxy desired state를 기록한다. reverseproxy용 route/upstream 설정은 정적 JSON 파일로 마운트하지 않는다.
 
 ## 직접 확인
 
