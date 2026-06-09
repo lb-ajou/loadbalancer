@@ -22,7 +22,7 @@ func Less(a, b Route) bool {
 		return aDepth > bDepth
 	}
 
-	return a.GlobalID < b.GlobalID
+	return a.ID < b.ID
 }
 
 func sortKey(path PathMatcher) (rank int, depth int) {

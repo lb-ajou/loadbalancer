@@ -6,10 +6,6 @@ import (
 	"reverseproxy-poc/internal/spec"
 )
 
-func loadedConfig(source string, routes ...spec.RouteConfig) spec.LoadedConfig {
-	return spec.LoadedConfig{Source: source, Config: spec.Config{Routes: routes}}
-}
-
 func hostRoute(id, pool string, path *spec.PathMatchConfig) spec.RouteConfig {
 	return spec.RouteConfig{
 		ID: id, Enabled: true,
@@ -18,11 +14,12 @@ func hostRoute(id, pool string, path *spec.PathMatchConfig) spec.RouteConfig {
 	}
 }
 
-func tableConfigs() []spec.LoadedConfig {
-	return []spec.LoadedConfig{
-		loadedConfig("default", hostRoute("catchall", "pool-default", nil), hostRoute("api", "pool-api", prefixPath("/api/"))),
-		loadedConfig("admin", hostRoute("login", "pool-admin", exactPath("/login"))),
-	}
+func tableConfig() spec.Config {
+	return spec.Config{Routes: []spec.RouteConfig{
+		hostRoute("catchall", "pool-default", nil),
+		hostRoute("api", "pool-api", prefixPath("/api/")),
+		hostRoute("login", "pool-admin", exactPath("/login")),
+	}}
 }
 
 func prefixPath(value string) *spec.PathMatchConfig {
@@ -47,30 +44,30 @@ func regexPath(value string) *spec.PathMatchConfig {
 
 func requireRouteOrder(t *testing.T, routes []Route) {
 	t.Helper()
-	if got := routes[0].GlobalID; got != "admin:login" {
-		t.Fatalf("routes[0].GlobalID = %q, want %q", got, "admin:login")
+	if got := routes[0].ID; got != "login" {
+		t.Fatalf("routes[0].ID = %q, want %q", got, "login")
 	}
-	if got := routes[1].GlobalID; got != "default:api" {
-		t.Fatalf("routes[1].GlobalID = %q, want %q", got, "default:api")
+	if got := routes[1].ID; got != "api" {
+		t.Fatalf("routes[1].ID = %q, want %q", got, "api")
 	}
-	if got := routes[2].GlobalID; got != "default:catchall" {
-		t.Fatalf("routes[2].GlobalID = %q, want %q", got, "default:catchall")
+	if got := routes[2].ID; got != "catchall" {
+		t.Fatalf("routes[2].ID = %q, want %q", got, "catchall")
 	}
 }
 
-func TestBuildTable_GlobalizesIDsAndSortsRoutes(t *testing.T) {
-	routes, err := BuildTable(tableConfigs())
+func TestBuildTable_CompilesAndSortsRoutes(t *testing.T) {
+	routes, err := BuildTable(tableConfig())
 	if err != nil {
 		t.Fatalf("BuildTable() error = %v", err)
 	}
 	requireRouteOrder(t, routes)
-	if got, want := routes[1].UpstreamPool, "default:pool-api"; got != want {
+	if got, want := routes[1].UpstreamPool, "pool-api"; got != want {
 		t.Fatalf("routes[1].UpstreamPool = %q, want %q", got, want)
 	}
 }
 
 func TestBuildRoutes_CompilesRegex(t *testing.T) {
-	routes, err := BuildRoutes("default", regexRouteConfig())
+	routes, err := BuildRoutes(regexRouteConfig())
 	if err != nil {
 		t.Fatalf("BuildRoutes() error = %v", err)
 	}

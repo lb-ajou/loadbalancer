@@ -8,9 +8,7 @@ import (
 )
 
 type Pool struct {
-	GlobalID    string
-	LocalID     string
-	Source      string
+	ID          string
 	Targets     []Target
 	HealthCheck *HealthCheck
 	mu          sync.RWMutex

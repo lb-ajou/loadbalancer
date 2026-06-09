@@ -25,18 +25,18 @@ func TestMatchSegmentPrefix(t *testing.T) {
 func TestResolve(t *testing.T) {
 	routes := []Route{
 		{
-			GlobalID:     "default:api",
+			ID:           "api",
 			Enabled:      true,
 			Hosts:        []string{"api.example.com"},
 			Path:         PathMatcher{Kind: PathKindPrefix, Value: "/api/"},
-			UpstreamPool: "default:pool-api",
+			UpstreamPool: "pool-api",
 		},
 		{
-			GlobalID:     "default:any",
+			ID:           "any",
 			Enabled:      true,
 			Hosts:        []string{"api.example.com"},
 			Path:         PathMatcher{Kind: PathKindAny},
-			UpstreamPool: "default:pool-default",
+			UpstreamPool: "pool-default",
 		},
 	}
 
@@ -44,7 +44,7 @@ func TestResolve(t *testing.T) {
 	if !ok {
 		t.Fatal("Resolve() returned no match")
 	}
-	if got, want := route.GlobalID, "default:api"; got != want {
-		t.Fatalf("Resolve() global id = %q, want %q", got, want)
+	if got, want := route.ID, "api"; got != want {
+		t.Fatalf("Resolve() id = %q, want %q", got, want)
 	}
 }

@@ -15,7 +15,7 @@ type Snapshot struct {
 	RaftIdentity config.RaftIdentity
 	RaftTiming   config.RaftTiming
 	VIP          config.VIPConfig
-	ProxyConfigs []spec.LoadedConfig
+	ProxyConfig  spec.Config
 	RouteTable   []route.Route
 	Upstreams    *upstream.Registry
 	AppliedAt    time.Time

@@ -175,7 +175,7 @@ func (h *Handler) nonLeastConnectionTarget(w http.ResponseWriter, r *http.Reques
 }
 
 func stickyCookieName(matchedRoute route.Route) string {
-	name := "rp_sticky_" + matchedRoute.Source + "_" + matchedRoute.LocalID
+	name := "rp_sticky_" + matchedRoute.ID
 	return strings.NewReplacer(":", "_", "/", "_", " ", "_").Replace(name)
 }
 

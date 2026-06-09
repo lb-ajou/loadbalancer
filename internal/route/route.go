@@ -3,9 +3,7 @@ package route
 import "regexp"
 
 type Route struct {
-	GlobalID     string
-	LocalID      string
-	Source       string
+	ID           string
 	Enabled      bool
 	Hosts        []string
 	Path         PathMatcher

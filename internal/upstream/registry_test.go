@@ -16,7 +16,7 @@ func TestCheckerStart_UpdatesPoolHealthState(t *testing.T) {
 
 	registry, err := NewRegistry([]Pool{
 		{
-			GlobalID: "default:pool-api",
+			ID: "pool-api",
 			Targets: []Target{
 				{Raw: server.Listener.Addr().String()},
 			},
@@ -45,7 +45,7 @@ func TestCheckerStart_UpdatesPoolHealthState(t *testing.T) {
 
 	deadline := time.Now().Add(300 * time.Millisecond)
 	for time.Now().Before(deadline) {
-		pool, ok := registry.Get("default:pool-api")
+		pool, ok := registry.Get("pool-api")
 		if !ok {
 			t.Fatal("registry.Get() returned no pool")
 		}

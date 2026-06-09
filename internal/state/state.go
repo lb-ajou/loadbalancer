@@ -12,22 +12,20 @@ import (
 	"reverseproxy-poc/internal/spec"
 )
 
-const DefaultNamespace = "default"
-
 const (
 	DefaultVIPGARPCount    = 5
 	DefaultVIPGARPInterval = "200ms"
 	DefaultVIPAcquireDelay = "500ms"
 )
 
-var namespacePattern = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+var identifierPattern = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
 
 type DesiredState struct {
-	Namespaces map[string]spec.Config
-	VIP        *ClusterVIPConfig
-	RaftTiming *ClusterRaftTimingConfig
-	Version    uint64
-	AppliedAt  time.Time
+	ProxyConfig spec.Config
+	VIP         *ClusterVIPConfig
+	RaftTiming  *ClusterRaftTimingConfig
+	Version     uint64
+	AppliedAt   time.Time
 }
 
 type ClusterVIPConfig struct {
@@ -45,17 +43,7 @@ type ClusterRaftTimingConfig struct {
 	CommitTimeout      string `json:"commitTimeout,omitempty"`
 }
 
-type NamespaceSummary struct {
-	Namespace         string
-	Path              string
-	Exists            bool
-	RouteCount        int
-	UpstreamPoolCount int
-}
-
-type NamespaceConfig struct {
-	Namespace     string
-	Exists        bool
+type AppliedProxyConfig struct {
 	Routes        []spec.RouteConfig
 	UpstreamPools map[string]spec.UpstreamPool
 	AppliedAt     time.Time
@@ -119,19 +107,8 @@ func IsNotLeader(err error) bool {
 	return errors.As(err, &stateErr) && stateErr.Code == "not_raft_leader"
 }
 
-func ValidateNamespaceName(namespace string) error {
-	if namespacePattern.MatchString(namespace) {
-		return nil
-	}
-	return &StateError{
-		StatusCode: http.StatusBadRequest,
-		Code:       "invalid_namespace",
-		Message:    "namespace must contain only letters, numbers, dot, underscore, or hyphen",
-	}
-}
-
 func ValidateIdentifier(value, field string) error {
-	if namespacePattern.MatchString(value) {
+	if identifierPattern.MatchString(value) {
 		return nil
 	}
 	codeField := strings.ReplaceAll(field, " ", "_")

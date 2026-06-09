@@ -3,7 +3,6 @@ package spec
 import "time"
 
 type Config struct {
-	Name          string                  `json:"name,omitempty"`
 	Routes        []RouteConfig           `json:"routes"`
 	UpstreamPools map[string]UpstreamPool `json:"upstream_pools"`
 }
@@ -59,10 +58,4 @@ type Duration string
 
 func (d Duration) Parse() (time.Duration, error) {
 	return time.ParseDuration(string(d))
-}
-
-type LoadedConfig struct {
-	Source string
-	Path   string
-	Config Config
 }

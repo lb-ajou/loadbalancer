@@ -5,39 +5,39 @@ import "testing"
 func TestSort(t *testing.T) {
 	routes := []Route{
 		{
-			GlobalID: "default:any",
-			Path:     PathMatcher{Kind: PathKindAny},
+			ID:   "any",
+			Path: PathMatcher{Kind: PathKindAny},
 		},
 		{
-			GlobalID: "default:regex",
+			ID: "regex",
 			Path: PathMatcher{
 				Kind:  PathKindRegex,
 				Value: "^/api/.+/debug$",
 			},
 		},
 		{
-			GlobalID: "default:api",
+			ID: "api",
 			Path: PathMatcher{
 				Kind:  PathKindPrefix,
 				Value: "/api/",
 			},
 		},
 		{
-			GlobalID: "default:users",
+			ID: "users",
 			Path: PathMatcher{
 				Kind:  PathKindPrefix,
 				Value: "/users/",
 			},
 		},
 		{
-			GlobalID: "default:admin",
+			ID: "admin",
 			Path: PathMatcher{
 				Kind:  PathKindPrefix,
 				Value: "/api/admin/",
 			},
 		},
 		{
-			GlobalID: "default:login",
+			ID: "login",
 			Path: PathMatcher{
 				Kind:  PathKindExact,
 				Value: "/login",
@@ -48,17 +48,17 @@ func TestSort(t *testing.T) {
 	Sort(routes)
 
 	want := []string{
-		"default:login",
-		"default:admin",
-		"default:api",
-		"default:users",
-		"default:regex",
-		"default:any",
+		"login",
+		"admin",
+		"api",
+		"users",
+		"regex",
+		"any",
 	}
 
 	for i, route := range routes {
-		if route.GlobalID != want[i] {
-			t.Fatalf("routes[%d].GlobalID = %q, want %q", i, route.GlobalID, want[i])
+		if route.ID != want[i] {
+			t.Fatalf("routes[%d].ID = %q, want %q", i, route.ID, want[i])
 		}
 	}
 }

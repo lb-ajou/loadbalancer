@@ -25,10 +25,10 @@ func Load(path string) (AppConfig, error) {
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return AppConfig{}, fmt.Errorf("decode config: %w", err)
 	}
-	return normalizeLoadedConfig(cfg)
+	return normalizeFileConfig(cfg)
 }
 
-func normalizeLoadedConfig(cfg fileConfig) (AppConfig, error) {
+func normalizeFileConfig(cfg fileConfig) (AppConfig, error) {
 	return Normalize(cfg.appConfig())
 }
 

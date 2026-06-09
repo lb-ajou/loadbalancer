@@ -12,15 +12,15 @@ import (
 	"reverseproxy-poc/internal/config"
 	"reverseproxy-poc/internal/route"
 	"reverseproxy-poc/internal/runtime"
+	"reverseproxy-poc/internal/spec"
 	"reverseproxy-poc/internal/upstream"
 )
 
 func newTestRoute(algorithm string) route.Route {
 	return route.Route{
-		GlobalID: "default:r-api", LocalID: "r-api", Source: "default",
-		Enabled: true, Hosts: []string{"api.example.com"},
+		ID: "r-api", Enabled: true, Hosts: []string{"api.example.com"},
 		Path:      route.PathMatcher{Kind: route.PathKindPrefix, Value: "/api/"},
-		Algorithm: algorithm, UpstreamPool: "default:pool-api",
+		Algorithm: algorithm, UpstreamPool: "pool-api",
 	}
 }
 
@@ -30,7 +30,7 @@ func newRegistry(t *testing.T, raws ...string) *upstream.Registry {
 	for _, raw := range raws {
 		targets = append(targets, upstream.Target{Raw: raw})
 	}
-	registry, err := upstream.NewRegistry([]upstream.Pool{{GlobalID: "default:pool-api", Targets: targets}})
+	registry, err := upstream.NewRegistry([]upstream.Pool{{ID: "pool-api", Targets: targets}})
 	if err != nil {
 		t.Fatalf("upstream.NewRegistry() error = %v", err)
 	}
@@ -38,12 +38,12 @@ func newRegistry(t *testing.T, raws ...string) *upstream.Registry {
 }
 
 func newProxyHandler(routes []route.Route, registry *upstream.Registry) http.Handler {
-	snapshot := runtime.NewSnapshot(boot.AppConfig{}, config.RaftIdentity{}, config.RaftTiming{}, config.VIPConfig{}, nil, routes, registry)
+	snapshot := runtime.NewSnapshot(boot.AppConfig{}, config.RaftIdentity{}, config.RaftTiming{}, config.VIPConfig{}, spec.Config{}, routes, registry)
 	return NewHandler(runtime.NewState(snapshot))
 }
 
 func newProxyHandlerWithConfig(appCfg boot.AppConfig, routes []route.Route, registry *upstream.Registry) http.Handler {
-	snapshot := runtime.NewSnapshot(appCfg, config.RaftIdentity{NodeID: "node-2"}, config.RaftTiming{}, config.VIPConfig{}, nil, routes, registry)
+	snapshot := runtime.NewSnapshot(appCfg, config.RaftIdentity{NodeID: "node-2"}, config.RaftTiming{}, config.VIPConfig{}, spec.Config{}, routes, registry)
 	return NewHandler(runtime.NewState(snapshot))
 }
 
@@ -78,7 +78,7 @@ func requireStatusCode(t *testing.T, rec *httptest.ResponseRecorder, want int) {
 
 func markAllTargetsUnhealthy(t *testing.T, registry *upstream.Registry) {
 	t.Helper()
-	pool, ok := registry.Get("default:pool-api")
+	pool, ok := registry.Get("pool-api")
 	if !ok {
 		t.Fatal("registry.Get() returned no pool")
 	}
@@ -137,7 +137,7 @@ func TestHandlerServeHTTP_ForwardsLBNodeHeader(t *testing.T) {
 }
 
 func TestHandlerServeHTTP_ReturnsNotFoundWhenNoRouteMatches(t *testing.T) {
-	snapshot := runtime.NewSnapshot(boot.AppConfig{}, config.RaftIdentity{}, config.RaftTiming{}, config.VIPConfig{}, nil, nil, nil)
+	snapshot := runtime.NewSnapshot(boot.AppConfig{}, config.RaftIdentity{}, config.RaftTiming{}, config.VIPConfig{}, spec.Config{}, nil, nil)
 	handler := NewHandler(runtime.NewState(snapshot))
 
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/api/users", nil)
@@ -255,7 +255,7 @@ func TestHandlerServeHTTP_LeastConnectionReleasesAfterProxyReturns(t *testing.T)
 	handler := newProxyHandler([]route.Route{newTestRoute("least_connection")}, registry)
 	req := httptest.NewRequest(http.MethodGet, "http://api.example.com/api/info", nil)
 	requireBodyEquals(t, handler, req, `{"server":"only"}`)
-	pool, ok := registry.Get("default:pool-api")
+	pool, ok := registry.Get("pool-api")
 	if !ok {
 		t.Fatal("registry.Get() returned no pool")
 	}
@@ -350,7 +350,7 @@ func fiveTupleRegistry(t *testing.T) *upstream.Registry {
 
 func markTargetUnhealthy(t *testing.T, registry *upstream.Registry, index int, reason string) {
 	t.Helper()
-	pool, ok := registry.Get("default:pool-api")
+	pool, ok := registry.Get("pool-api")
 	if !ok {
 		t.Fatal("registry.Get() returned no pool")
 	}

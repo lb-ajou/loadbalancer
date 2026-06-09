@@ -27,14 +27,14 @@ func NewRegistry(pools []Pool) (*Registry, error) {
 }
 
 func (r *Registry) addPool(pool Pool) error {
-	if _, exists := r.pools[pool.GlobalID]; exists {
-		return fmt.Errorf("duplicate upstream pool %q", pool.GlobalID)
+	if _, exists := r.pools[pool.ID]; exists {
+		return fmt.Errorf("duplicate upstream pool %q", pool.ID)
 	}
 	poolCopy, err := copyPool(pool)
 	if err != nil {
 		return err
 	}
-	r.pools[pool.GlobalID] = poolCopy
+	r.pools[pool.ID] = poolCopy
 	return nil
 }
 
@@ -84,8 +84,8 @@ func ensureTargetStates(pool *Pool) {
 	pool.targetState = states
 }
 
-func (r *Registry) Get(globalID string) (*Pool, bool) {
-	pool, ok := r.pools[globalID]
+func (r *Registry) Get(id string) (*Pool, bool) {
+	pool, ok := r.pools[id]
 	return pool, ok
 }
 

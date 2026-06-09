@@ -6,25 +6,20 @@ import (
 	"reverseproxy-poc/internal/spec"
 )
 
-func BuildRegistry(configs []spec.LoadedConfig) (*Registry, error) {
-	pools := make([]Pool, 0)
-	for _, loaded := range configs {
-		compiled, err := BuildPools(loaded.Source, loaded.Config)
-		if err != nil {
-			return nil, err
-		}
-		pools = append(pools, compiled...)
+func BuildRegistry(cfg spec.Config) (*Registry, error) {
+	pools, err := BuildPools(cfg)
+	if err != nil {
+		return nil, err
 	}
-
 	return NewRegistry(pools)
 }
 
-func BuildPools(source string, cfg spec.Config) ([]Pool, error) {
+func BuildPools(cfg spec.Config) ([]Pool, error) {
 	pools := make([]Pool, 0, len(cfg.UpstreamPools))
-	for localID, poolCfg := range cfg.UpstreamPools {
-		pool, err := buildPool(source, localID, poolCfg)
+	for id, poolCfg := range cfg.UpstreamPools {
+		pool, err := buildPool(id, poolCfg)
 		if err != nil {
-			return nil, fmt.Errorf("build upstream pool %q from source %q: %w", localID, source, err)
+			return nil, fmt.Errorf("build upstream pool %q: %w", id, err)
 		}
 		pools = append(pools, pool)
 	}
@@ -32,15 +27,9 @@ func BuildPools(source string, cfg spec.Config) ([]Pool, error) {
 	return pools, nil
 }
 
-func GlobalPoolID(source, localID string) string {
-	return source + ":" + localID
-}
-
-func buildPool(source, localID string, poolCfg spec.UpstreamPool) (Pool, error) {
+func buildPool(id string, poolCfg spec.UpstreamPool) (Pool, error) {
 	return Pool{
-		GlobalID:    GlobalPoolID(source, localID),
-		LocalID:     localID,
-		Source:      source,
+		ID:          id,
 		Targets:     buildTargets(poolCfg.Upstreams),
 		HealthCheck: buildHealthCheck(poolCfg.HealthCheck),
 		targetState: healthyTargetStates(len(poolCfg.Upstreams)),
