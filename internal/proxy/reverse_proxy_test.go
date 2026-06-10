@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"reverseproxy-poc/internal/boot"
-	"reverseproxy-poc/internal/config"
-	"reverseproxy-poc/internal/route"
-	"reverseproxy-poc/internal/runtime"
-	"reverseproxy-poc/internal/spec"
-	"reverseproxy-poc/internal/upstream"
+	"loadbalancer/internal/boot"
+	"loadbalancer/internal/config"
+	"loadbalancer/internal/route"
+	"loadbalancer/internal/runtime"
+	"loadbalancer/internal/spec"
+	"loadbalancer/internal/upstream"
 )
 
 func newTestRoute(algorithm string) route.Route {

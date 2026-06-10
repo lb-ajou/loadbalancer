@@ -3,7 +3,7 @@ package route
 import (
 	"testing"
 
-	"reverseproxy-poc/internal/spec"
+	"loadbalancer/internal/spec"
 )
 
 func TestBuildTableAndResolve_UsesPlainRouteAndPoolIDs(t *testing.T) {

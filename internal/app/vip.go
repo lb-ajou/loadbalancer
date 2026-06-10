@@ -8,8 +8,8 @@ import (
 
 	"github.com/hashicorp/raft"
 
-	"reverseproxy-poc/internal/config"
-	"reverseproxy-poc/internal/vip"
+	"loadbalancer/internal/config"
+	"loadbalancer/internal/vip"
 )
 
 type vipRunner interface {

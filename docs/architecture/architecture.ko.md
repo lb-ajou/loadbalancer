@@ -1,6 +1,6 @@
 # Architecture
 
-이 프로젝트는 L7 reverse proxy, Dashboard/Admin API, Raft 기반 cluster desired state 복제를 하나의 프로세스 안에 둔다.
+이 프로젝트는 L7 로드밸런서, Dashboard/Admin API, Raft 기반 cluster desired state 복제를 하나의 프로세스 안에 둔다.
 
 ## 핵심 원칙
 

@@ -1,8 +1,8 @@
 FROM busybox:1.31.1
 
 WORKDIR /app
-COPY .out/reverseproxy /app/reverseproxy
+COPY .out/loadbalancer /app/loadbalancer
 
 EXPOSE 8080 9090 7001 7002 7003
 
-ENTRYPOINT ["/app/reverseproxy"]
+ENTRYPOINT ["/app/loadbalancer"]

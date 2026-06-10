@@ -3,7 +3,7 @@ package upstream
 import (
 	"fmt"
 
-	"reverseproxy-poc/internal/spec"
+	"loadbalancer/internal/spec"
 )
 
 func BuildRegistry(cfg spec.Config) (*Registry, error) {

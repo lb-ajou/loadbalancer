@@ -3,7 +3,7 @@ package dashboard
 import (
 	"net/http"
 
-	"reverseproxy-poc/internal/runtime"
+	"loadbalancer/internal/runtime"
 )
 
 func registerRuntimeAPI(

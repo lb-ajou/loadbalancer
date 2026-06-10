@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"reverseproxy-poc/internal/spec"
+	"loadbalancer/internal/spec"
 )
 
 func BuildTable(cfg spec.Config) ([]Route, error) {

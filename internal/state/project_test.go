@@ -3,9 +3,9 @@ package state
 import (
 	"testing"
 
-	"reverseproxy-poc/internal/boot"
-	"reverseproxy-poc/internal/config"
-	"reverseproxy-poc/internal/spec"
+	"loadbalancer/internal/boot"
+	"loadbalancer/internal/config"
+	"loadbalancer/internal/spec"
 )
 
 func TestProjectSnapshot_BuildsRuntimeFromProxyConfig(t *testing.T) {

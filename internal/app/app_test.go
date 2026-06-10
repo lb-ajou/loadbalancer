@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"reverseproxy-poc/internal/boot"
-	"reverseproxy-poc/internal/config"
-	"reverseproxy-poc/internal/dashboard"
-	"reverseproxy-poc/internal/upstream"
+	"loadbalancer/internal/boot"
+	"loadbalancer/internal/config"
+	"loadbalancer/internal/dashboard"
+	"loadbalancer/internal/upstream"
 )
 
 func TestAppStartAndStopHealthChecker(t *testing.T) {

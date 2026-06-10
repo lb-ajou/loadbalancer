@@ -6,8 +6,8 @@ import (
 
 	"github.com/hashicorp/raft"
 
-	"reverseproxy-poc/internal/spec"
-	control "reverseproxy-poc/internal/state"
+	"loadbalancer/internal/spec"
+	control "loadbalancer/internal/state"
 )
 
 type fsmSnapshot struct {

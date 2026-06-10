@@ -6,8 +6,8 @@ import (
 	"io"
 	"net/http"
 
-	"reverseproxy-poc/internal/admin"
-	"reverseproxy-poc/internal/spec"
+	"loadbalancer/internal/admin"
+	"loadbalancer/internal/spec"
 )
 
 func registerConfigAPI(mux *http.ServeMux, service admin.Service) {

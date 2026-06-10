@@ -3,12 +3,12 @@ package state
 import (
 	"fmt"
 
-	"reverseproxy-poc/internal/boot"
-	"reverseproxy-poc/internal/config"
-	"reverseproxy-poc/internal/route"
-	appruntime "reverseproxy-poc/internal/runtime"
-	"reverseproxy-poc/internal/spec"
-	"reverseproxy-poc/internal/upstream"
+	"loadbalancer/internal/boot"
+	"loadbalancer/internal/config"
+	"loadbalancer/internal/route"
+	appruntime "loadbalancer/internal/runtime"
+	"loadbalancer/internal/spec"
+	"loadbalancer/internal/upstream"
 )
 
 func ProjectSnapshot(appCfg boot.AppConfig, raftCfg config.RaftConfig, localVIP config.VIPConfig, desired DesiredState) (appruntime.Snapshot, error) {

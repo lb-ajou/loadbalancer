@@ -3,11 +3,11 @@ package runtime
 import (
 	"testing"
 
-	"reverseproxy-poc/internal/boot"
-	"reverseproxy-poc/internal/config"
-	"reverseproxy-poc/internal/route"
-	"reverseproxy-poc/internal/spec"
-	"reverseproxy-poc/internal/upstream"
+	"loadbalancer/internal/boot"
+	"loadbalancer/internal/config"
+	"loadbalancer/internal/route"
+	"loadbalancer/internal/spec"
+	"loadbalancer/internal/upstream"
 )
 
 func TestNewSnapshot_CopiesSlices(t *testing.T) {

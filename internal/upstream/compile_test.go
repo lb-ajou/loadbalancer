@@ -3,7 +3,7 @@ package upstream
 import (
 	"testing"
 
-	"reverseproxy-poc/internal/spec"
+	"loadbalancer/internal/spec"
 )
 
 func TestBuildRegistry_UsesPoolIDsDirectly(t *testing.T) {

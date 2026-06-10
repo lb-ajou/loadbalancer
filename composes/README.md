@@ -1,8 +1,8 @@
 # Compose Test Environments
 
-`composes/`는 리버스프록시를 로컬에서 실행할 때 붙여볼 수 있는 백엔드 테스트 환경 모음이다.
+`composes/`는 로드밸런서를 로컬에서 실행할 때 붙여볼 수 있는 백엔드 테스트 환경 모음이다.
 
-대부분의 compose는 프록시 앱 자체를 띄우지 않는다. 프록시는 로컬에서 실행하고, compose는 외부 접근 가능한 백엔드 서버들과 health check 대상만 제공한다. `raft-ha-cluster`는 예외로, backend와 3-node reverse proxy cluster를 함께 띄운다.
+대부분의 compose는 로드밸런서 앱 자체를 띄우지 않는다. 로드밸런서는 로컬에서 실행하고, compose는 외부 접근 가능한 백엔드 서버들과 health check 대상만 제공한다. `raft-ha-cluster`는 예외로, backend와 3-node 로드밸런서 cluster를 함께 띄운다.
 
 ## 공통 규칙
 
@@ -28,7 +28,7 @@
 - `least-connection-check`
   - 느린 in-flight 요청이 있을 때 다른 healthy backend로 우회되는지 검증하는 시나리오
 - `raft-ha-cluster`
-  - 3-node Raft reverse proxy cluster와 3-backend 환경에서 bootstrap, join, replication, failover, persistence를 검증하는 시나리오
+  - 3-node Raft 로드밸런서 cluster와 3-backend 환경에서 bootstrap, join, replication, failover, persistence를 검증하는 시나리오
 
 ## 실행 예시
 
@@ -62,7 +62,7 @@ docker compose -f composes/route-basic/compose.yaml down
 ## 로컬 프록시와 함께 테스트하는 기본 순서
 
 1. 원하는 compose 시나리오를 띄운다.
-2. 로컬 `configs/app.json`으로 리버스프록시 앱을 실행한다.
+2. 로컬 `configs/app.json`으로 로드밸런서 앱을 실행한다.
 3. 해당 시나리오 `README`의 route/upstream 예시를 Admin API나 대시보드 저장 API로 기록한다.
 4. 프록시 주소와 백엔드 주소를 각각 호출해 동작을 비교한다.
 5. 필요하면 대시보드 `GET /api/runtime`로 현재 라우트와 upstream 상태를 확인한다.

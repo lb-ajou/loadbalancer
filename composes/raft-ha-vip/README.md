@@ -10,7 +10,7 @@
 bash scripts/raft-ha-vip-smoke.sh
 ```
 
-smoke script는 실행 시 Linux binary를 `composes/raft-ha-vip/.out`에 빌드하고 compose project를 올린 뒤, 성공하면 기본적으로 컨테이너와 volume을 정리한다. cluster bootstrap/join은 이 binary의 `reverseproxy cluster ...` CLI로 실행한다.
+smoke script는 실행 시 Linux binary를 `composes/raft-ha-vip/.out`에 빌드하고 compose project를 올린 뒤, 성공하면 기본적으로 컨테이너와 volume을 정리한다. cluster bootstrap/join은 이 binary의 `loadbalancer cluster ...` CLI로 실행한다.
 
 proxy service healthcheck는 clean node에서도 응답하는 `/api/node/cluster-status`를 사용한다. Raft node identity, VIP address, 초기 route/upstream은 app config 파일이 아니라 smoke script의 lifecycle/Admin API 호출로 설정한다. Raft node identity는 성공 후 Raft data dir의 local metadata에 저장되어 재시작 복원에 사용된다.
 
@@ -23,7 +23,7 @@ KEEP_RAFT_HA_VIP_SMOKE=1 bash scripts/raft-ha-vip-smoke.sh
 compose project name을 고정하면 보존된 컨테이너를 반복 진단하기 쉽다.
 
 ```bash
-RAFT_HA_VIP_PROJECT_NAME=reverseproxy-raft-ha-vip-dev \
+RAFT_HA_VIP_PROJECT_NAME=loadbalancer-raft-ha-vip-dev \
   KEEP_RAFT_HA_VIP_SMOKE=1 \
   bash scripts/raft-ha-vip-smoke.sh
 ```
@@ -31,7 +31,7 @@ RAFT_HA_VIP_PROJECT_NAME=reverseproxy-raft-ha-vip-dev \
 수동 정리는 같은 project name으로 수행한다.
 
 ```bash
-docker compose -p reverseproxy-raft-ha-vip-dev \
+docker compose -p loadbalancer-raft-ha-vip-dev \
   -f composes/raft-ha-vip/compose.yaml \
   down -v --remove-orphans
 ```
@@ -52,7 +52,7 @@ RAFT_HA_VIP_BACKEND_C_IP=192.168.50.223 \
 RAFT_HA_VIP_MACVLAN_PARENT=ens18 \
 RAFT_HA_VIP_MACVLAN_SUBNET=192.168.50.0/24 \
 RAFT_HA_VIP_MACVLAN_GATEWAY=192.168.50.1 \
-docker compose -p reverseproxy-raft-ha-vip-macvlan \
+docker compose -p loadbalancer-raft-ha-vip-macvlan \
   -f composes/raft-ha-vip/compose.yaml \
   -f composes/raft-ha-vip/compose.macvlan.yaml \
   up -d --build
@@ -65,7 +65,7 @@ macvlan에서는 container IP가 직접 노출되므로 override에서 proxy ser
 ## 정리
 
 ```bash
-docker compose -p reverseproxy-raft-ha-vip-macvlan \
+docker compose -p loadbalancer-raft-ha-vip-macvlan \
   -f composes/raft-ha-vip/compose.yaml \
   -f composes/raft-ha-vip/compose.macvlan.yaml \
   down -v --remove-orphans

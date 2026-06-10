@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"reverseproxy-poc/internal/spec"
-	"reverseproxy-poc/internal/state"
+	"loadbalancer/internal/spec"
+	"loadbalancer/internal/state"
 )
 
 type stubStateStore struct {

@@ -3,7 +3,7 @@ package route
 import (
 	"testing"
 
-	"reverseproxy-poc/internal/spec"
+	"loadbalancer/internal/spec"
 )
 
 func hostRoute(id, pool string, path *spec.PathMatchConfig) spec.RouteConfig {

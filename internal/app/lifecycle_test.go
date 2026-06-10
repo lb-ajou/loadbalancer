@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reverseproxy-poc/internal/boot"
-	"reverseproxy-poc/internal/dashboard"
-	"reverseproxy-poc/internal/raft"
-	"reverseproxy-poc/internal/state"
+	"loadbalancer/internal/boot"
+	"loadbalancer/internal/dashboard"
+	"loadbalancer/internal/raft"
+	"loadbalancer/internal/state"
 )
 
 func TestBootstrapClusterStartsRaftOnCleanNode(t *testing.T) {

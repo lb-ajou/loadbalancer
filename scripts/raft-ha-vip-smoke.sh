@@ -6,7 +6,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "$REPO_ROOT"
 
 COMPOSE_FILE="composes/raft-ha-vip/compose.yaml"
-PROJECT_NAME="${RAFT_HA_VIP_PROJECT_NAME:-reverseproxy-raft-ha-vip-$$}"
+PROJECT_NAME="${RAFT_HA_VIP_PROJECT_NAME:-loadbalancer-raft-ha-vip-$$}"
 OUT_DIR="composes/raft-ha-vip/.out"
 VIP_ADDR="172.30.10.100"
 VIP_CIDR="172.30.10.100/24"
@@ -73,7 +73,7 @@ check_dependencies() {
 
 build_binaries() {
   mkdir -p "$OUT_DIR"
-  CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o "${OUT_DIR}/reverseproxy" ./main.go
+  CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o "${OUT_DIR}/loadbalancer" ./main.go
   CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o "${OUT_DIR}/test-server" ./composes/test-server
 }
 
@@ -99,7 +99,7 @@ config_url() {
 }
 
 lifecycle_cli() {
-  "${OUT_DIR}/reverseproxy" cluster "$@"
+  "${OUT_DIR}/loadbalancer" cluster "$@"
 }
 
 bootstrap_cluster() {

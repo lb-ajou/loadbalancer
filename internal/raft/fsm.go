@@ -10,10 +10,10 @@ import (
 
 	"github.com/hashicorp/raft"
 
-	"reverseproxy-poc/internal/boot"
-	"reverseproxy-poc/internal/config"
-	"reverseproxy-poc/internal/spec"
-	control "reverseproxy-poc/internal/state"
+	"loadbalancer/internal/boot"
+	"loadbalancer/internal/config"
+	"loadbalancer/internal/spec"
+	control "loadbalancer/internal/state"
 )
 
 type FSM struct {

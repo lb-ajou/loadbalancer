@@ -1,6 +1,6 @@
 # raft-ha-cluster
 
-3개 reverse proxy 컨테이너가 HashiCorp Raft로 설정 상태를 공유하고, 3개 backend server로 요청을 전달하는 HA 검증 시나리오다.
+3개 로드밸런서 컨테이너가 HashiCorp Raft로 설정 상태를 공유하고, 3개 backend server로 요청을 분산 전달하는 HA 검증 시나리오다.
 
 ## 구성
 
@@ -18,15 +18,15 @@
   - dashboard: `http://localhost:19092`
   - raft host port: `17003`
 
-각 proxy는 별도 named volume에 `/app/data/raft`를 보관한다. app config 파일에는 Raft node ID, bind address, advertise address를 넣지 않는다. clean node의 identity는 smoke script가 `reverseproxy cluster ...` CLI로 전달하고, 성공 후에는 Raft data dir의 local metadata에 저장되어 재시작 복원에 사용된다. `proxy-1`은 빈 desired state로 bootstrap하고, 초기 route/upstream은 smoke script가 dashboard/Admin API 쓰기로 생성한다. join node들은 Raft log를 통해 같은 설정 state를 따라온다.
+각 로드밸런서 노드는 별도 named volume에 `/app/data/raft`를 보관한다. app config 파일에는 Raft node ID, bind address, advertise address를 넣지 않는다. clean node의 identity는 smoke script가 `loadbalancer cluster ...` CLI로 전달하고, 성공 후에는 Raft data dir의 local metadata에 저장되어 재시작 복원에 사용된다. `proxy-1`은 빈 desired state로 bootstrap하고, 초기 route/upstream은 smoke script가 dashboard/Admin API 쓰기로 생성한다. join node들은 Raft log를 통해 같은 설정 state를 따라온다.
 
 ## 실행
 
-이 시나리오는 compose가 backend와 reverse proxy를 함께 띄운다. 현재 compose build는 `composes/raft-ha-cluster/.out`에 있는 Linux binary를 `busybox:1.31.1` 기반 local image로 복사한다. 수동으로 compose만 실행하려면 먼저 binary를 준비해야 한다.
+이 시나리오는 compose가 backend와 로드밸런서를 함께 띄운다. 현재 compose build는 `composes/raft-ha-cluster/.out`에 있는 Linux binary를 `busybox:1.31.1` 기반 local image로 복사한다. 수동으로 compose만 실행하려면 먼저 binary를 준비해야 한다.
 
 ```bash
 mkdir -p composes/raft-ha-cluster/.out
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o composes/raft-ha-cluster/.out/reverseproxy ./main.go
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o composes/raft-ha-cluster/.out/loadbalancer ./main.go
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o composes/raft-ha-cluster/.out/test-server ./composes/test-server
 docker compose -f composes/raft-ha-cluster/compose.yaml up -d --build
 ```
@@ -52,7 +52,7 @@ scripts/raft-ha-cluster-smoke.sh
 - `go`
 - `jq`
 
-smoke script는 실행할 때마다 먼저 local Linux binary를 `composes/raft-ha-cluster/.out`에 빌드한 뒤, 이 binary를 포함한 busybox 기반 local image를 compose로 빌드한다. cluster bootstrap/join은 이 binary의 `reverseproxy cluster ...` CLI로 실행하고, route/upstream 설정 쓰기는 dashboard/Admin API로 수행한다. 기본 동작은 종료 시 `docker compose down -v --remove-orphans`로 컨테이너와 volume을 정리하는 것이다.
+smoke script는 실행할 때마다 먼저 local Linux binary를 `composes/raft-ha-cluster/.out`에 빌드한 뒤, 이 binary를 포함한 busybox 기반 local image를 compose로 빌드한다. cluster bootstrap/join은 이 binary의 `loadbalancer cluster ...` CLI로 실행하고, route/upstream 설정 쓰기는 dashboard/Admin API로 수행한다. 기본 동작은 종료 시 `docker compose down -v --remove-orphans`로 컨테이너와 volume을 정리하는 것이다.
 
 실패 상태나 Raft data를 직접 확인해야 하면 정리를 건너뛸 수 있다.
 

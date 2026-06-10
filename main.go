@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"reverseproxy-poc/internal/cli"
+	"loadbalancer/internal/cli"
 )
 
 func main() {

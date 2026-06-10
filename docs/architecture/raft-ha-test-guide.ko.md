@@ -1,6 +1,6 @@
 # Raft HA 클러스터 테스트 가이드
 
-이 문서는 Docker Compose 기반 `raft-ha-cluster` 시나리오의 테스트 환경 정보와 검증 방법을 정리한다. 대상은 3개 reverse proxy node가 HashiCorp Raft로 설정 상태를 공유하고, 3개 backend server로 요청을 분산 처리하는 HA 검증 환경이다.
+이 문서는 Docker Compose 기반 `raft-ha-cluster` 시나리오의 테스트 환경 정보와 검증 방법을 정리한다. 대상은 3개 로드밸런서 노드가 HashiCorp Raft로 설정 상태를 공유하고, 3개 backend server로 요청을 분산 처리하는 HA 검증 환경이다.
 
 ## 테스트 목적
 
@@ -17,7 +17,7 @@
 | 경로 | 용도 |
 | --- | --- |
 | `composes/raft-ha-cluster/compose.yaml` | 3 proxy, 3 backend Docker Compose 시나리오 |
-| `composes/raft-ha-cluster/Dockerfile.proxy` | local build된 reverse proxy binary를 포함하는 테스트 이미지 |
+| `composes/raft-ha-cluster/Dockerfile.proxy` | local build된 로드밸런서 binary를 포함하는 테스트 이미지 |
 | `composes/raft-ha-cluster/Dockerfile.test-server` | local build된 backend test server binary를 포함하는 테스트 이미지 |
 | `composes/raft-ha-cluster/configs/node-1/app.json` | bootstrap proxy node 설정 |
 | `composes/raft-ha-cluster/configs/node-2/app.json` | join proxy node 설정 |
@@ -65,9 +65,9 @@ Compose build는 `busybox:1.31.1` 이미지를 사용한다. 이미지가 로컬
 | `node-2` | `proxy-2` | `http://localhost:18081` | `http://localhost:19091` | `proxy-2:7002` | `proxy-2-raft` |
 | `node-3` | `proxy-3` | `http://localhost:18082` | `http://localhost:19092` | `proxy-3:7003` | `proxy-3-raft` |
 
-`proxy-1`은 clean node로 시작한 뒤 smoke script가 `reverseproxy cluster bootstrap` CLI를 호출해 single-node Raft cluster를 만든다. 초기 route/upstream은 dashboard/Admin API 쓰기로 생성한다.
+`proxy-1`은 clean node로 시작한 뒤 smoke script가 `loadbalancer cluster bootstrap` CLI를 호출해 single-node Raft cluster를 만든다. 초기 route/upstream은 dashboard/Admin API 쓰기로 생성한다.
 
-`proxy-2`, `proxy-3`도 clean node로 시작한다. smoke script가 각 노드에 `reverseproxy cluster join` CLI로 peer dashboard/admin endpoint 후보를 전달하면, 노드는 후보를 순서대로 시도해 cluster에 join한 뒤 leader가 가진 Raft 상태를 따라온다.
+`proxy-2`, `proxy-3`도 clean node로 시작한다. smoke script가 각 노드에 `loadbalancer cluster join` CLI로 peer dashboard/admin endpoint 후보를 전달하면, 노드는 후보를 순서대로 시도해 cluster에 join한 뒤 leader가 가진 Raft 상태를 따라온다.
 
 compose proxy healthcheck는 bootstrap 전 clean node도 ready로 볼 수 있도록 `/api/node/cluster-status`를 사용한다. `/api/config`는 Raft store가 열린 뒤 설정 복제 검증 단계에서 조회한다.
 
@@ -103,10 +103,10 @@ curl -fsS -H 'Host: raft.localtest.me' http://localhost:18080/api/info | jq
 scripts/raft-ha-cluster-smoke.sh
 ```
 
-script는 실행마다 고유 compose project name을 사용한다. 기본값은 `reverseproxy-raft-ha-<pid>` 형태다. 전체 흐름은 다음과 같다.
+script는 실행마다 고유 compose project name을 사용한다. 기본값은 `loadbalancer-raft-ha-<pid>` 형태다. 전체 흐름은 다음과 같다.
 
 1. 기존 동일 project compose 환경을 `down -v --remove-orphans`로 정리한다.
-2. Linux용 `reverseproxy`, `test-server` binary를 `composes/raft-ha-cluster/.out`에 빌드한다.
+2. Linux용 `loadbalancer`, `test-server` binary를 `composes/raft-ha-cluster/.out`에 빌드한다.
 3. `backend-a`, `backend-b`, `backend-c`, `proxy-1`을 시작한다.
 4. `proxy-1` dashboard가 응답할 때까지 대기한다.
 5. dashboard/Admin API로 route `r-raft`와 pool `pool-raft`를 `proxy-1`에 생성한다.
@@ -145,13 +145,13 @@ KEEP_RAFT_HA_SMOKE=1 scripts/raft-ha-cluster-smoke.sh
 고정 project name을 사용하면 이후 Docker Compose command로 같은 환경을 다루기 쉽다.
 
 ```bash
-RAFT_HA_PROJECT_NAME=reverseproxy-raft-ha-debug KEEP_RAFT_HA_SMOKE=1 scripts/raft-ha-cluster-smoke.sh
+RAFT_HA_PROJECT_NAME=loadbalancer-raft-ha-debug KEEP_RAFT_HA_SMOKE=1 scripts/raft-ha-cluster-smoke.sh
 ```
 
 보존한 환경을 정리하려면 같은 project name으로 `down -v`를 실행한다.
 
 ```bash
-docker compose -p reverseproxy-raft-ha-debug -f composes/raft-ha-cluster/compose.yaml down -v --remove-orphans
+docker compose -p loadbalancer-raft-ha-debug -f composes/raft-ha-cluster/compose.yaml down -v --remove-orphans
 ```
 
 ## 수동 테스트 절차
@@ -164,7 +164,7 @@ Compose image는 repository root의 Go source를 직접 빌드하지 않고, 미
 
 ```bash
 mkdir -p composes/raft-ha-cluster/.out
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o composes/raft-ha-cluster/.out/reverseproxy ./main.go
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o composes/raft-ha-cluster/.out/loadbalancer ./main.go
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o composes/raft-ha-cluster/.out/test-server ./composes/test-server
 ```
 
@@ -444,7 +444,7 @@ docker compose -f composes/raft-ha-cluster/compose.yaml down -v --remove-orphans
 `KEEP_RAFT_HA_SMOKE=1` 또는 고정 project name으로 실행한 smoke 환경은 해당 project name을 명시해서 정리한다.
 
 ```bash
-docker compose -p reverseproxy-raft-ha-debug -f composes/raft-ha-cluster/compose.yaml down -v --remove-orphans
+docker compose -p loadbalancer-raft-ha-debug -f composes/raft-ha-cluster/compose.yaml down -v --remove-orphans
 ```
 
 ## 문제 해결
@@ -477,7 +477,7 @@ join node는 `/api/node/join-cluster` 요청의 `peers` 후보 중 하나 이상
 
 ### Docker image build가 실패하는 경우
 
-`composes/raft-ha-cluster/.out/reverseproxy`와 `composes/raft-ha-cluster/.out/test-server`가 존재하는지 확인한다. 없으면 수동 빌드 명령을 다시 실행하거나 smoke script를 사용한다.
+`composes/raft-ha-cluster/.out/loadbalancer`와 `composes/raft-ha-cluster/.out/test-server`가 존재하는지 확인한다. 없으면 수동 빌드 명령을 다시 실행하거나 smoke script를 사용한다.
 
 ### 보안 전제
 

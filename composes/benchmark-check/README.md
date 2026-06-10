@@ -1,6 +1,6 @@
 # benchmark-check
 
-리버스프록시와 비교군 `Caddy`, `Nginx`, `HAProxy`를 함께 띄우고 `wrk`, `vegeta`, `k6`로 성능을 측정하는 전용 시나리오다.
+자체 로드밸런서와 비교군 `Caddy`, `Nginx`, `HAProxy`를 함께 띄우고 `wrk`, `vegeta`, `k6`로 성능을 측정하는 전용 시나리오다.
 
 ## 목적
 
@@ -16,7 +16,7 @@
 docker compose -f composes/benchmark-check/compose.yaml up -d --build
 ```
 
-`proxy-init` 서비스가 reverseproxy의 Admin API에 단일 proxy desired state를 기록한다. reverseproxy용 route/upstream 설정은 정적 JSON 파일로 마운트하지 않는다.
+`proxy-init` 서비스가 자체 로드밸런서의 Admin API에 단일 proxy desired state를 기록한다. 로드밸런서용 route/upstream 설정은 정적 JSON 파일로 마운트하지 않는다.
 
 ## 직접 확인
 
@@ -28,7 +28,7 @@ curl -s http://localhost:18881/api/info
 
 기대 결과:
 
-- reverseproxy는 `18080`
+- 자체 로드밸런서는 `18080`
 - Caddy는 `18081`
 - Nginx는 `18082`
 - HAProxy는 `18083`

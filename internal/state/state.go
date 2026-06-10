@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"reverseproxy-poc/internal/spec"
+	"loadbalancer/internal/spec"
 )
 
 const (

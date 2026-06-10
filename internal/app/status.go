@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/raft"
 
-	"reverseproxy-poc/internal/dashboard"
+	"loadbalancer/internal/dashboard"
 )
 
 func (a *App) raftClusterStatus(ctx context.Context) dashboard.ClusterView {

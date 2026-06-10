@@ -9,13 +9,13 @@ import (
 
 	"github.com/hashicorp/raft"
 
-	"reverseproxy-poc/internal/boot"
-	"reverseproxy-poc/internal/config"
-	"reverseproxy-poc/internal/dashboard"
-	"reverseproxy-poc/internal/raft"
-	appruntime "reverseproxy-poc/internal/runtime"
-	"reverseproxy-poc/internal/spec"
-	"reverseproxy-poc/internal/state"
+	"loadbalancer/internal/boot"
+	"loadbalancer/internal/config"
+	"loadbalancer/internal/dashboard"
+	"loadbalancer/internal/raft"
+	appruntime "loadbalancer/internal/runtime"
+	"loadbalancer/internal/spec"
+	"loadbalancer/internal/state"
 )
 
 const localLeaderWaitTimeout = 5 * time.Second

@@ -1,4 +1,4 @@
-module reverseproxy-poc
+module loadbalancer
 
 go 1.26.3
 

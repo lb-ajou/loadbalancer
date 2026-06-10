@@ -7,16 +7,16 @@ COPY main.go ./
 COPY configs ./configs
 COPY internal ./internal
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/reverseproxy ./main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/loadbalancer ./main.go
 
 FROM alpine:3.20
 
 RUN apk add --no-cache ca-certificates wget
 
 WORKDIR /app
-COPY --from=builder /out/reverseproxy /app/reverseproxy
+COPY --from=builder /out/loadbalancer /app/loadbalancer
 COPY configs /app/configs
 
 EXPOSE 8080 9090
 
-ENTRYPOINT ["/app/reverseproxy"]
+ENTRYPOINT ["/app/loadbalancer"]

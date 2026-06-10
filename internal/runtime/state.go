@@ -4,11 +4,11 @@ import (
 	"sync"
 	"time"
 
-	"reverseproxy-poc/internal/boot"
-	"reverseproxy-poc/internal/config"
-	"reverseproxy-poc/internal/route"
-	"reverseproxy-poc/internal/spec"
-	"reverseproxy-poc/internal/upstream"
+	"loadbalancer/internal/boot"
+	"loadbalancer/internal/config"
+	"loadbalancer/internal/route"
+	"loadbalancer/internal/spec"
+	"loadbalancer/internal/upstream"
 )
 
 type State struct {

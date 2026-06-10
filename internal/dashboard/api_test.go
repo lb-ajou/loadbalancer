@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"reverseproxy-poc/internal/admin"
-	"reverseproxy-poc/internal/config"
-	"reverseproxy-poc/internal/route"
-	"reverseproxy-poc/internal/runtime"
-	"reverseproxy-poc/internal/spec"
-	"reverseproxy-poc/internal/state"
-	"reverseproxy-poc/internal/upstream"
+	"loadbalancer/internal/admin"
+	"loadbalancer/internal/config"
+	"loadbalancer/internal/route"
+	"loadbalancer/internal/runtime"
+	"loadbalancer/internal/spec"
+	"loadbalancer/internal/state"
+	"loadbalancer/internal/upstream"
 )
 
 type stubService struct {

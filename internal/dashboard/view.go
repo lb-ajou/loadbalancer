@@ -4,10 +4,10 @@ import (
 	"sort"
 	"time"
 
-	"reverseproxy-poc/internal/route"
-	"reverseproxy-poc/internal/runtime"
-	"reverseproxy-poc/internal/spec"
-	"reverseproxy-poc/internal/upstream"
+	"loadbalancer/internal/route"
+	"loadbalancer/internal/runtime"
+	"loadbalancer/internal/spec"
+	"loadbalancer/internal/upstream"
 )
 
 type RuntimeView struct {

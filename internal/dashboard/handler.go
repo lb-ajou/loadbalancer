@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"reverseproxy-poc/internal/admin"
-	"reverseproxy-poc/internal/runtime"
-	"reverseproxy-poc/internal/spec"
-	"reverseproxy-poc/internal/state"
+	"loadbalancer/internal/admin"
+	"loadbalancer/internal/runtime"
+	"loadbalancer/internal/spec"
+	"loadbalancer/internal/state"
 )
 
 //go:embed static/index.html

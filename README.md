@@ -1,12 +1,12 @@
-# Reverse Proxy
+# L7 Load Balancer
 
-Raft 기반 상태 저장소와 VIP failover를 포함한 L7 reverse proxy입니다.
+Raft 기반 상태 저장소와 VIP failover를 포함한 L7 로드밸런서입니다.
 
 이 프로젝트는 단일 프록시 프로세스를 넘어서, 여러 노드가 같은 프록시 설정을 공유하고 리더 장애 시 VIP를 이전해 서비스를 계속 제공하는 구조를 제공합니다. 프록시 route/upstream 설정은 파일이 아니라 Admin API와 Dashboard를 통해 저장되며, 저장된 desired state는 Raft log/snapshot을 통해 복제됩니다.
 
 ## 주요 기능
 
-- HTTP reverse proxy
+- HTTP 로드밸런싱
 - Host/path 기반 route 매칭
 - 클러스터 단일 프록시 설정 관리
 - Upstream pool과 health check
@@ -50,7 +50,7 @@ configs/app.json
 │   ├── boot/                 # app.json 로드, 기본값, 검증
 │   ├── cli/                  # serve, cluster status/bootstrap/join CLI
 │   ├── dashboard/            # Dashboard UI와 JSON API
-│   ├── proxy/                # reverse proxy handler
+│   ├── proxy/                # HTTP 요청 전달 handler
 │   ├── raft/                 # Raft node, store, FSM, snapshot
 │   ├── config/               # 계층 간 공유되는 실행 설정 DTO
 │   ├── route/                # route compile, sort, match, resolve
@@ -109,15 +109,15 @@ go run .
 로컬 바이너리:
 
 ```bash
-go build -o reverseproxy ./main.go
-./reverseproxy serve configs/app.json
+go build -o loadbalancer ./main.go
+./loadbalancer serve configs/app.json
 ```
 
 Docker 이미지:
 
 ```bash
-docker build -t reverseproxy .
-docker run --rm -p 8080:8080 -p 9090:9090 reverseproxy
+docker build -t loadbalancer .
+docker run --rm -p 8080:8080 -p 9090:9090 loadbalancer
 ```
 
 ## 테스트
@@ -222,13 +222,13 @@ API 계약의 자세한 내용은 `docs/api/dashboard-api.ko.md`를 참고하세
 상태 확인:
 
 ```bash
-./reverseproxy cluster status --dashboard http://localhost:9090
+./loadbalancer cluster status --dashboard http://localhost:9090
 ```
 
 첫 노드 bootstrap:
 
 ```bash
-./reverseproxy cluster bootstrap \
+./loadbalancer cluster bootstrap \
   --dashboard http://node1:9090 \
   --node-id node-1 \
   --raft-advertise node1:7000 \
@@ -239,7 +239,7 @@ API 계약의 자세한 내용은 `docs/api/dashboard-api.ko.md`를 참고하세
 다른 노드 join:
 
 ```bash
-./reverseproxy cluster join \
+./loadbalancer cluster join \
   --dashboard http://node2:9090 \
   --node-id node-2 \
   --raft-advertise node2:7000 \

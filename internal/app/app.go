@@ -16,16 +16,16 @@ import (
 
 	"github.com/hashicorp/raft"
 
-	"reverseproxy-poc/internal/admin"
-	"reverseproxy-poc/internal/boot"
-	"reverseproxy-poc/internal/config"
-	"reverseproxy-poc/internal/dashboard"
-	"reverseproxy-poc/internal/proxy"
-	"reverseproxy-poc/internal/raft"
-	appruntime "reverseproxy-poc/internal/runtime"
-	"reverseproxy-poc/internal/state"
-	"reverseproxy-poc/internal/upstream"
-	internalvip "reverseproxy-poc/internal/vip"
+	"loadbalancer/internal/admin"
+	"loadbalancer/internal/boot"
+	"loadbalancer/internal/config"
+	"loadbalancer/internal/dashboard"
+	"loadbalancer/internal/proxy"
+	"loadbalancer/internal/raft"
+	appruntime "loadbalancer/internal/runtime"
+	"loadbalancer/internal/state"
+	"loadbalancer/internal/upstream"
+	internalvip "loadbalancer/internal/vip"
 )
 
 const raftJoinTimeout = 30 * time.Second

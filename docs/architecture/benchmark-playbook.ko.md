@@ -1,6 +1,6 @@
 # 벤치마크 플레이북
 
-이 문서는 `composes/benchmark-check` 시나리오에서 리버스프록시와 비교군 프록시 성능을 어떻게 측정할지 정리한다.
+이 문서는 `composes/benchmark-check` 시나리오에서 자체 로드밸런서와 비교군 프록시 성능을 어떻게 측정할지 정리한다.
 
 ## 목표
 
@@ -318,7 +318,7 @@ tools/benchmark-summary.sh plan/benchmarks/baseline-20260419
 | `vegeta` | `throughput` | `Success [ratio]`, `Status Codes`, `Error Set`, `p95/p99` | 고정 RPS를 준 상태에서 실제 처리율과 성공률이 유지되는지 본다 |
 | `k6` | `http_reqs`, `iterations` | `http_req_failed`, `checks`, threshold, `p95/p99` | 시나리오형 부하에서 처리량뿐 아니라 SLA 기준을 만족하는지 본다 |
 
-## reverseproxy 병목 분석과 개선 방향
+## 자체 로드밸런서 병목 분석과 개선 방향
 
 이 섹션은 현재 코드 구조를 기준으로 `reverseproxy`가 왜 `HAProxy` 대비 불리한지, 그리고 어떤 순서로 줄여 나가야 할지를 설명한다. 이 단계의 목적은 곧바로 "어떤 최적화를 넣을지"보다 먼저 "어떤 비용이 매 요청 hot path에 붙어 있는지"를 분명히 하는 것이다.
 
@@ -332,11 +332,11 @@ tools/benchmark-summary.sh plan/benchmarks/baseline-20260419
 
 ### 병목 후보 1: 요청마다 프록시 객체와 upstream URL을 다시 준비하는 비용
 
-현재 `internal/proxy/reverse_proxy.go`의 흐름상 요청을 업스트림으로 전달할 때, 업스트림 주소를 다시 해석하고 reverse proxy 관련 준비 작업을 요청 단위로 반복할 가능성이 높다.
+현재 `internal/proxy/reverse_proxy.go`의 흐름상 요청을 업스트림으로 전달할 때, 업스트림 주소를 다시 해석하고 요청 전달 관련 준비 작업을 요청 단위로 반복할 가능성이 높다.
 
 이 패턴이 병목 후보인 이유는 아래와 같다.
 
-- URL 파싱과 reverse proxy 생성은 기능적으로는 간단하지만, 요청 수가 커지면 작은 할당이 매우 많이 누적된다.
+- URL 파싱과 요청 전달 proxy 생성은 기능적으로는 간단하지만, 요청 수가 커지면 작은 할당이 매우 많이 누적된다.
 - 이 비용은 업스트림 I/O를 기다리는 동안 한 번만 드는 비용이 아니라, 모든 요청이 프록시를 타는 순간마다 반드시 지불하는 고정 비용이다.
 - 고정 비용은 낮은 부하에서는 잘 보이지 않다가, `vegeta 600+`처럼 큐가 생기기 시작하는 구간에서 GC 압박과 scheduler 지연으로 tail latency를 빠르게 키운다.
 - `k6` spike처럼 짧은 시간에 동시 요청이 몰릴 때는, 요청마다 같은 준비를 반복하는 구조가 순간적인 allocation burst를 만들고 dropped iteration으로 이어지기 쉽다.
@@ -344,7 +344,7 @@ tools/benchmark-summary.sh plan/benchmarks/baseline-20260419
 왜 이것이 `HAProxy` 대비 약점으로 이어지느냐도 분명하다.
 
 - `HAProxy`, `Nginx`, `Caddy`는 프록시 경로에서 필요한 라우팅 정보와 업스트림 연결 전략을 대체로 초기화 단계에서 준비하고, 런타임 hot path에서는 가능한 한 재사용한다.
-- 반대로 애플리케이션 레벨 reverse proxy가 요청마다 같은 메타데이터를 재구성하면, 같은 기능을 수행하더라도 Go 런타임의 할당, escape, GC 영향을 더 직접적으로 받는다.
+- 반대로 애플리케이션 레벨 로드밸런서가 요청마다 같은 메타데이터를 재구성하면, 같은 기능을 수행하더라도 Go 런타임의 할당, escape, GC 영향을 더 직접적으로 받는다.
 
 개선 방향은 요청 경로에서 "결정"만 하고, "준비"는 미리 끝내는 것이다.
 
@@ -476,7 +476,7 @@ tools/benchmark-summary.sh plan/benchmarks/baseline-20260419
 코드 단위 흐름 변화:
 
 1. 이전
-   요청 수신 -> `target.Raw` 조합 -> `url.Parse("http://" + raw)` -> reverse proxy 생성
+   요청 수신 -> `target.Raw` 조합 -> `url.Parse("http://" + raw)` -> 요청 전달 proxy 생성
 2. 이후
    registry 생성 -> `parseTargetURLs()`로 `Target.URL` 준비 -> 요청 수신 -> 준비된 `Target.URL` 사용
 
@@ -566,7 +566,7 @@ tools/benchmark-summary.sh plan/benchmarks/baseline-20260419
 
 이 구조의 한계는 아래와 같다.
 
-- reverseproxy 전용 connection pool 정책이 없다.
+- 로드밸런서 전용 connection pool 정책이 없다.
 - benchmark 시나리오처럼 upstream host 수와 동시 요청 패턴이 분명한 환경에서도 idle connection 크기를 명시적으로 맞추지 못한다.
 - `MaxIdleConnsPerHost`, `MaxConnsPerHost` 같은 제어 없이 기본 동작에 맡기면, steady 구간은 버티더라도 높은 고정 RPS에서 dial churn이 커질 수 있다.
 - 결국 요청당 새 연결이 너무 자주 생기거나, 반대로 connection reuse가 늦어지면서 queueing과 tail latency가 늘 수 있다.
@@ -596,7 +596,7 @@ tools/benchmark-summary.sh plan/benchmarks/baseline-20260419
 - `proxy.transportConfig`
 - `proxy.Handler.newReverseProxy`
 
-핵심 방향은 `http.DefaultTransport` 직접 사용을 중단하고, reverseproxy 전용 transport를 명시적으로 만드는 것이다.
+핵심 방향은 `http.DefaultTransport` 직접 사용을 중단하고, 로드밸런서 전용 transport를 명시적으로 만드는 것이다.
 
 ### 코드 단위 설계
 
@@ -622,7 +622,7 @@ tools/benchmark-summary.sh plan/benchmarks/baseline-20260419
 - `cloneDefaultTransport()`
   기본 transport 동작을 최대한 유지하되, 안전하게 `*http.Transport` 복사본을 얻는다.
 - `applyTransportDefaults()`
-  benchmark와 운영형 reverse proxy에 맞는 기본값을 주입한다.
+  benchmark와 운영형 로드밸런서에 맞는 기본값을 주입한다.
 - `newTransport()`
   위 두 단계를 묶어 최종 transport를 반환한다.
 - `transportConfig`
@@ -783,7 +783,7 @@ tools/benchmark-summary.sh plan/benchmarks/baseline-20260419
 바뀐 로직:
 
 - `Handler.transport` 타입을 일반 `http.RoundTripper`가 아니라 `*http.Transport`로 구체화했다.
-- `NewHandler()`는 더 이상 `http.DefaultTransport`를 직접 넣지 않고 `newTransport()`를 통해 reverseproxy 전용 transport를 생성한다.
+- `NewHandler()`는 더 이상 `http.DefaultTransport`를 직접 넣지 않고 `newTransport()`를 통해 로드밸런서 전용 transport를 생성한다.
 
 코드 단위 흐름 변화:
 
@@ -794,7 +794,7 @@ tools/benchmark-summary.sh plan/benchmarks/baseline-20260419
 
 왜 효과가 있는가:
 
-- reverseproxy가 upstream 연결 풀 정책을 명시적으로 소유하게 된다.
+- 로드밸런서가 upstream 연결 풀 정책을 명시적으로 소유하게 된다.
 - 이후 벤치마크 기반으로 transport 상수를 조정할 수 있는 구조가 생긴다.
 
 #### 변경 2: transport 생성 책임을 `transport.go`로 분리

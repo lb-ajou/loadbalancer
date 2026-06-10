@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"reverseproxy-poc/internal/app"
-	"reverseproxy-poc/internal/boot"
+	"loadbalancer/internal/app"
+	"loadbalancer/internal/boot"
 )
 
 const defaultConfigPath = "configs/app.json"
@@ -98,7 +98,7 @@ func serveConfigPath(args []string) string {
 }
 
 func runServe(ctx context.Context, configPath string, stdout io.Writer) error {
-	logger := log.New(stdout, "[reverseproxy] ", log.LstdFlags|log.Lmicroseconds)
+	logger := log.New(stdout, "[loadbalancer] ", log.LstdFlags|log.Lmicroseconds)
 
 	cfg, err := boot.Load(configPath)
 	if err != nil {
