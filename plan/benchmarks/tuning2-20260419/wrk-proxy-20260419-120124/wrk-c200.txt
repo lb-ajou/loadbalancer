@@ -1,0 +1,8 @@
+Running 15s test @ http://proxy:8080/api/info
+  4 threads and 200 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    26.86ms   17.84ms 194.33ms   77.50%
+    Req/Sec     1.98k   646.06     3.80k    65.20%
+  118053 requests in 15.08s, 26.80MB read
+Requests/sec:   7830.25
+Transfer/sec:      1.78MB
