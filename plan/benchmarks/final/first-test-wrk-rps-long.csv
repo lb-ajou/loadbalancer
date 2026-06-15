@@ -1,0 +1,13 @@
+target,scenario,rps
+proxy,c50,1622.79
+proxy,c100,2671.52
+proxy,c200,3235.09
+caddy,c50,2322.84
+caddy,c100,5871.89
+caddy,c200,6979.00
+nginx,c50,3199.82
+nginx,c100,3195.77
+nginx,c200,3035.18
+haproxy,c50,5246.96
+haproxy,c100,6717.92
+haproxy,c200,12081.42

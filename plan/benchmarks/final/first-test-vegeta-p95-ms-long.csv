@@ -1,0 +1,13 @@
+target,scenario,p95_ms
+proxy,r300,6.993
+proxy,r600,86.149
+proxy,r900,551.174
+caddy,r300,7.479
+caddy,r600,15.426
+caddy,r900,29.453
+nginx,r300,10.106
+nginx,r600,1051.000
+nginx,r900,313.155
+haproxy,r300,14.543
+haproxy,r600,22.671
+haproxy,r900,363.329
