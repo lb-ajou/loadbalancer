@@ -44,9 +44,9 @@ GARP 송신은 `internal/vip/arp_linux.go`에 구현하였다. `NewARPAnnouncer(
 
 ## 관련 문서
 
-- [Keepalived Introduction](https://www.keepalived.org/doc/introduction.html)
-- [Keepalived Terminology](https://keepalived.org/doc/terminology.html)
-- [Keepalived Failover using VRRP](https://keepalived.org/doc/case_study_failover.html)
+- [Keepalived Introduction](https://keepalived.readthedocs.io/en/latest/introduction.html)
+- [Keepalived Terminology](https://keepalived.readthedocs.io/en/latest/terminology.html)
+- [Keepalived Failover using VRRP](https://keepalived.readthedocs.io/en/latest/case_study_failover.html)
 - [VIP Controller 구현](../../internal/vip/controller.go)
 - [Linux Netlink VIP 구현](../../internal/vip/netlink_linux.go)
 - [GARP Announcer 구현](../../internal/vip/arp_linux.go)
