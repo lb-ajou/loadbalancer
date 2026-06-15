@@ -1,0 +1,21 @@
+name: loadbalancer
+
+services:
+  loadbalancer:
+    image: ghcr.io/lb-ajou/loadbalancer:latest
+    command: ["serve", "/app/configs/app.json"]
+    ports:
+      - "${LB_PROXY_PORT:-8080}:8080"
+      - "${LB_DASHBOARD_PORT:-9090}:9090"
+    volumes:
+      - ./configs:/app/configs:ro
+      - lb-raft-data:/app/data/raft
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/api/node/cluster-status"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+volumes:
+  lb-raft-data:
