@@ -3,7 +3,7 @@
 .idea
 .env
 
-configs/data/
+data/
 internal/dashboard/static/*
 !.gitkeep
 
