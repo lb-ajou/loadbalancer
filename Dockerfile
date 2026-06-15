@@ -14,8 +14,6 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /out/loadbal
 
 FROM alpine:3.20
 
-RUN apk add --no-cache ca-certificates wget
-
 WORKDIR /app
 COPY --from=builder /out/loadbalancer /app/loadbalancer
 COPY configs /app/configs
