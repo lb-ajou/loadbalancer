@@ -1,0 +1,125 @@
+name: Build Container Image
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      dashboard_release_tag:
+        description: "dashboard-frontend release tag to embed. Empty uses the most recent dashboard release."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  DASHBOARD_REPO: lb-ajou/dashboard-frontend
+
+jobs:
+  build:
+    name: Build and publish image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out loadbalancer
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.26.3"
+          cache: true
+
+      - name: Resolve dashboard release
+        id: dashboard
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.DASHBOARD_FRONTEND_RELEASE_TOKEN || github.token }}
+          REQUESTED_DASHBOARD_RELEASE_TAG: ${{ inputs.dashboard_release_tag || '' }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "${REQUESTED_DASHBOARD_RELEASE_TAG}" ]; then
+            tag="${REQUESTED_DASHBOARD_RELEASE_TAG}"
+          else
+            tag="$(gh release view --repo "${DASHBOARD_REPO}" --json tagName --jq .tagName)"
+          fi
+
+          if [ -z "${tag}" ]; then
+            echo "Dashboard release tag could not be resolved" >&2
+            exit 1
+          fi
+
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+          echo "Dashboard release: ${tag}"
+
+      - name: Download dashboard release asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.DASHBOARD_FRONTEND_RELEASE_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p .tmp/dashboard-static
+          gh release download "${{ steps.dashboard.outputs.tag }}" \
+            --repo "${DASHBOARD_REPO}" \
+            --pattern "index.html" \
+            --dir .tmp/dashboard-static \
+            --clobber
+
+          if [ ! -s .tmp/dashboard-static/index.html ]; then
+            echo "Dashboard release asset index.html is missing or empty" >&2
+            exit 1
+          fi
+
+          cp .tmp/dashboard-static/index.html internal/dashboard/static/index.html
+
+      - name: Run Go tests
+        run: go test ./...
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image metadata
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          short_sha="${GITHUB_SHA::12}"
+          image="${REGISTRY}/${GITHUB_REPOSITORY,,}"
+
+          echo "tag=sha-${short_sha}" >> "${GITHUB_OUTPUT}"
+          echo "image=${image}" >> "${GITHUB_OUTPUT}"
+          echo "Image: ${image}:sha-${short_sha}"
+
+      - name: Build and push image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ steps.image.outputs.image }}:${{ steps.image.outputs.tag }}
+            ${{ steps.image.outputs.image }}:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.title=loadbalancer
+            org.opencontainers.image.description=L7 loadbalancer with embedded dashboard
+            org.opencontainers.image.vendor=lb-ajou
+            org.opencontainers.image.version=${{ steps.image.outputs.tag }}
