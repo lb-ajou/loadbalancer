@@ -117,7 +117,11 @@ Docker 이미지:
 
 ```bash
 docker build -t loadbalancer .
-docker run --rm -p 8080:8080 -p 9090:9090 loadbalancer
+docker run --rm \
+  -p 8080:8080 \
+  -p 9090:9090 \
+  -v "$PWD/configs:/configs:ro" \
+  loadbalancer serve /configs/app.json
 ```
 
 ## 테스트
