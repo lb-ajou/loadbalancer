@@ -43,12 +43,12 @@
 ## 관련 문서
 
 - [벤치마크 플레이북](../architecture/benchmark-playbook.ko.md)
-- [1차 wrk 결과](https://github.com/lb-ajou/loadbalancer/blob/main/plan/benchmarks/final/first-test-wrk-rps.csv)
-- [1차 vegeta 결과](https://github.com/lb-ajou/loadbalancer/blob/main/plan/benchmarks/final/first-test-vegeta-p95-ms.csv)
-- [1차 k6 결과](https://github.com/lb-ajou/loadbalancer/blob/main/plan/benchmarks/final/first-test-k6-p95-ms.csv)
-- [리팩토링 후 vegeta 결과](https://github.com/lb-ajou/loadbalancer/blob/main/plan/benchmarks/tuning2-20260419/vegeta-proxy-20260419-115824/vegeta-r900.txt)
-- [리팩토링 후 k6 결과](https://github.com/lb-ajou/loadbalancer/blob/main/plan/benchmarks/tuning2-20260419/k6-proxy-20260419-115959/k6-summary.txt)
-- [리팩토링 후 wrk 결과](https://github.com/lb-ajou/loadbalancer/blob/main/plan/benchmarks/tuning2-20260419/wrk-proxy-20260419-120124/wrk-c200.txt)
+- [1차 wrk 결과](https://github.com/lb-ajou/loadbalancer/blob/main/docs/benchmark/final/first-test-wrk-rps.csv)
+- [1차 vegeta 결과](https://github.com/lb-ajou/loadbalancer/blob/main/docs/benchmark/final/first-test-vegeta-p95-ms.csv)
+- [1차 k6 결과](https://github.com/lb-ajou/loadbalancer/blob/main/docs/benchmark/final/first-test-k6-p95-ms.csv)
+- [리팩토링 후 vegeta 결과](https://github.com/lb-ajou/loadbalancer/blob/main/docs/benchmark/tuning2-20260419/vegeta-proxy-20260419-115824/vegeta-r900.txt)
+- [리팩토링 후 k6 결과](https://github.com/lb-ajou/loadbalancer/blob/main/docs/benchmark/tuning2-20260419/k6-proxy-20260419-115959/k6-summary.txt)
+- [리팩토링 후 wrk 결과](https://github.com/lb-ajou/loadbalancer/blob/main/docs/benchmark/tuning2-20260419/wrk-proxy-20260419-120124/wrk-c200.txt)
 - [Reverse Proxy 구현](../../internal/proxy/reverse_proxy.go)
 - [Transport 설정](../../internal/proxy/transport.go)
 - [Upstream 상태 구조](../../internal/upstream/upstream.go)

@@ -44,7 +44,7 @@ curl -s http://localhost:18881/api/info
 4. `tools/benchmark-k6.sh`로 램프업과 스파이크 구간을 검증한다.
 5. 각 실험과 병행해 `tools/benchmark-stats.sh`를 실행해 `CPU/메모리`를 기록한다.
 
-모든 스크립트의 기본 결과 경로는 `plan/benchmarks/<tool>-<timestamp>/`다.
+모든 스크립트의 기본 결과 경로는 `docs/benchmark/<tool>-<timestamp>/`다.
 
 ## 5회 반복 측정
 
@@ -81,7 +81,7 @@ BENCHMARK_SESSION_NAME=baseline-20260419 tools/benchmark-matrix.sh
 이미 측정이 끝난 세션을 다시 요약하려면 아래 명령을 사용한다.
 
 ```bash
-tools/benchmark-summary.sh plan/benchmarks/baseline-20260419
+tools/benchmark-summary.sh docs/benchmark/baseline-20260419
 ```
 
 ## 예시

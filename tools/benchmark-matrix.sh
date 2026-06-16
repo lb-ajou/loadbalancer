@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-results_root="${1:-plan/benchmarks}"
+results_root="${1:-docs/benchmark}"
 targets_csv="${BENCHMARK_MATRIX_TARGETS:-proxy,caddy,nginx,haproxy}"
 tools_csv="${BENCHMARK_MATRIX_TOOLS:-wrk,vegeta,k6}"
 repeats="${BENCHMARK_REPEATS:-5}"

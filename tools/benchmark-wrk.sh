@@ -10,7 +10,7 @@ host_header="${BENCHMARK_HOST_HEADER:-benchmark.localtest.me}"
 duration="${1:-30s}"
 threads="${2:-4}"
 connections_csv="${3:-50,100,200,400}"
-results_root="${4:-plan/benchmarks}"
+results_root="${4:-docs/benchmark}"
 timestamp="$(date +%Y%m%d-%H%M%S)"
 results_dir="${results_root}/wrk-${target}-${timestamp}"
 

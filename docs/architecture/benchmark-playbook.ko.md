@@ -116,7 +116,7 @@ BENCHMARK_SESSION_NAME=baseline-20260419 tools/benchmark-matrix.sh
 이미 저장된 세션을 다시 집계할 때는 아래 명령을 사용한다.
 
 ```bash
-tools/benchmark-summary.sh plan/benchmarks/baseline-20260419
+tools/benchmark-summary.sh docs/benchmark/baseline-20260419
 ```
 
 실제 반복 측정 시나리오는 아래 문서를 참고한다.
@@ -233,7 +233,7 @@ tools/benchmark-summary.sh plan/benchmarks/baseline-20260419
 
 ## 본측정 결과
 
-아래 표는 `2026-04-19`에 `plan/benchmarks/final/` 아래 산출된 결과를 요약한 것이다.
+아래 표는 `2026-04-19`에 `docs/benchmark/final/` 아래 산출된 결과를 요약한 것이다.
 
 ### `wrk` 15s, 4 threads, `50/100/200` connections
 
@@ -264,7 +264,7 @@ tools/benchmark-summary.sh plan/benchmarks/baseline-20260419
 
 ### 2차 튜닝 후 재측정 `reverseproxy` vs `haproxy`
 
-아래 표는 1차 hot path 최적화와 2차 transport tuning 이후 `2026-04-19`에 다시 측정한 결과다. 산출물은 `plan/benchmarks/tuning2-20260419/` 아래에 저장했다.
+아래 표는 1차 hot path 최적화와 2차 transport tuning 이후 `2026-04-19`에 다시 측정한 결과다. 산출물은 `docs/benchmark/tuning2-20260419/` 아래에 저장했다.
 
 | Scenario | `reverseproxy` | `haproxy` | HAProxy 대비 | 메모 |
 | --- | --- | --- | ---: | --- |
